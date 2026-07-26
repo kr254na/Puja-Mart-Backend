@@ -15,6 +15,7 @@ import com.krishna.Pujamart.identity.model.User;
 import com.krishna.Pujamart.identity.repository.RefreshTokenRepository;
 import com.krishna.Pujamart.identity.repository.UserRepository;
 import com.krishna.Pujamart.identity.utility.JwtUtil;
+import com.krishna.Pujamart.identity.utility.UserMapper;
 import com.krishna.Pujamart.identity.utility.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserMapper userMapper;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
@@ -65,17 +67,12 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
         userRepository.save(user);
-        UserResponse userResponse = mapUserToUserResponse(user);
+        UserResponse userResponse = userMapper.toUserResponse(user);
         RegistrationResponse registrationResponse = RegistrationResponse
                 .builder()
                 .userResponse(userResponse)
                 .build();
-        return ApiResponse
-                .<RegistrationResponse>builder()
-                .success(true)
-                .message("Registration Successfull")
-                .data(registrationResponse)
-                .build();
+        return ApiResponse.success("Registration Successful",registrationResponse);
     }
 
     @Transactional
@@ -94,7 +91,7 @@ public class AuthService {
 
         User user = userPrincipal.getUser();
         UserResponse userResponse =
-                mapUserToUserResponse(user);
+                userMapper.toUserResponse(user);
 
         saveRefreshToken(user,refreshToken);
 
@@ -104,11 +101,7 @@ public class AuthService {
                 .user(userResponse)
                 .build();
 
-        return ApiResponse.<LoginResponse>builder()
-                .success(true)
-                .message("Login Successful")
-                .data(loginResponse)
-                .build();
+        return ApiResponse.success("Login Successful",loginResponse);
     }
 
     @Transactional(noRollbackFor = RefreshTokenException.class)
@@ -141,7 +134,7 @@ public class AuthService {
 
         String newAccessToken = jwtUtil.generateAccessToken(authentication);
 
-        UserResponse userResponse = mapUserToUserResponse(user);
+        UserResponse userResponse = userMapper.toUserResponse(user);
 
         storedToken.setRevoked(true);
 
@@ -149,15 +142,12 @@ public class AuthService {
 
         saveRefreshToken(user,newRefreshToken);
 
-        return ApiResponse.<LoginResponse>builder()
-                .success(true)
-                .message("New Access Token generated successfully")
-                .data(LoginResponse.builder()
+        return ApiResponse.success("New Access Token generated successfully",
+                LoginResponse.builder()
                         .accessToken(newAccessToken)
                         .refreshToken(newRefreshToken)
                         .user(userResponse)
-                        .build())
-                .build();
+                        .build());
     }
 
     @Transactional(noRollbackFor = RefreshTokenException.class)
@@ -177,10 +167,7 @@ public class AuthService {
             throw new RefreshTokenException("Security Alert: Token has already been used. All sessions have been terminated.");
         }
         storedToken.setRevoked(true);
-        return ApiResponse.<String>builder()
-                .success(true)
-                .message("Logged out successfully")
-                .build();
+        return ApiResponse.success("Logged out successfully");
     }
 
     @Transactional
@@ -227,20 +214,14 @@ public class AuthService {
 
             saveRefreshToken(user, refreshToken);
 
-            UserResponse userResponse = mapUserToUserResponse(user);
+            UserResponse userResponse = userMapper.toUserResponse(user);
 
             LoginResponse loginResponse = LoginResponse.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
                     .user(userResponse)
                     .build();
-
-            return ApiResponse.<LoginResponse>builder()
-                    .success(true)
-                    .message("Google login successful")
-                    .data(loginResponse)
-                    .build();
-
+            return ApiResponse.success("Google login successful",loginResponse);
         } catch (IOException e) {
             throw new BadCredentialsException(
                     "Failed to verify authentication with Google");
@@ -259,15 +240,4 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
     }
 
-    private UserResponse mapUserToUserResponse (User user) {
-        return UserResponse
-                .builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .contact(user.getContact())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .build();
-    }
 }

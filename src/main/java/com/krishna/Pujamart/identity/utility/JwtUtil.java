@@ -40,7 +40,7 @@ public class JwtUtil {
                 .subject(authentication.getName())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis()+accessTokenExpiration))
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(getKey())
                 .compact();
     }
 
@@ -53,7 +53,7 @@ public class JwtUtil {
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis()
                         + refreshTokenExpiration))
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(getKey())
                 .compact();
     }
 

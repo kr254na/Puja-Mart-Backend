@@ -5,6 +5,7 @@ import com.krishna.Pujamart.identity.dto.UserResponse;
 import com.krishna.Pujamart.identity.exception.UserNotFoundException;
 import com.krishna.Pujamart.identity.model.User;
 import com.krishna.Pujamart.identity.repository.UserRepository;
+import com.krishna.Pujamart.identity.utility.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,17 +19,13 @@ import java.util.UUID;
 public class UserAdminServiceImpl implements UserAdminService {
 
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Override
     public ApiResponse<Page<UserResponse>> getAllUsers(Pageable pageable) {
         Page<UserResponse> usersPage = userRepository.findAll(pageable)
-                .map(this::mapToUserResponse);
-
-        return ApiResponse.<Page<UserResponse>>builder()
-                .success(true)
-                .message("Fetched all users successfully")
-                .data(usersPage)
-                .build();
+                .map(userMapper::toUserResponse);
+        return ApiResponse.success("Fetched all users successfully",usersPage);
     }
 
     @Override
@@ -36,11 +33,7 @@ public class UserAdminServiceImpl implements UserAdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
-        return ApiResponse.<UserResponse>builder()
-                .success(true)
-                .message("User details retrieved successfully")
-                .data(mapToUserResponse(user))
-                .build();
+        return ApiResponse.success("User details retrieved successfully",userMapper.toUserResponse(user));
     }
 
     @Override
@@ -55,20 +48,7 @@ public class UserAdminServiceImpl implements UserAdminService {
 
         String message = !currentStatus ? "Account unlocked successfully" : "Account locked successfully";
 
-        return ApiResponse.<String>builder()
-                .success(true)
-                .message(message)
-                .build();
+        return ApiResponse.success(message);
     }
 
-    private UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .contact(user.getContact())
-                .role(user.getRole())
-                .build();
-    }
 }

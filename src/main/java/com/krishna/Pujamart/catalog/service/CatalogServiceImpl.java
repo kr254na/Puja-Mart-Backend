@@ -4,6 +4,7 @@ import com.krishna.Pujamart.catalog.dto.*;
 import com.krishna.Pujamart.catalog.exception.*;
 import com.krishna.Pujamart.catalog.model.*;
 import com.krishna.Pujamart.catalog.repository.*;
+import com.krishna.Pujamart.catalog.utility.ProductMapper;
 import com.krishna.Pujamart.identity.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,42 +23,39 @@ public class CatalogServiceImpl implements CatalogService {
     private final CategoryRepository categoryRepository;
     private final DeityRepository deityRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ProductMapper productMapper;
 
     @Override
     public ApiResponse<Page<ProductResponse>> getFilteredProducts(UUID categoryId, UUID deityId, Pageable pageable) {
-        return mapToApiResponse(true,
-                "Products fetched successfully",
+        return ApiResponse.success("Products fetched successfully",
                 productRepository
                         .findFilteredCatalog(categoryId, deityId, pageable)
-                        .map(this::mapProductToProductResponse));
+                        .map(productMapper::toProductResponse));
     }
 
     @Override
     public ApiResponse<ProductResponse> getProductById(UUID id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + id));
-        return mapToApiResponse(true,
-                "Product fetched successfully",
-                mapProductToProductResponse(product));
+        return ApiResponse.success("Product fetched successfully",
+                productMapper.toProductResponse(product));
     }
 
     @Override
     public ApiResponse<List<CategoryResponse>> getAllCategories() {
-        return mapToApiResponse(true,
-                "Categories fetched successfully",
+        return ApiResponse.success("Categories fetched successfully",
                 categoryRepository.findAll()
                         .stream()
-                        .map(this::mapCategoryToCategoryResponse)
+                        .map(productMapper::toCategoryResponse)
                         .toList());
     }
 
     @Override
     public ApiResponse<List<DeityResponse>> getAllDeities() {
-        return mapToApiResponse(true,
-                "Deities fetched successfully",
+        return ApiResponse.success("Deities fetched successfully",
                 deityRepository.findAll()
                 .stream()
-                .map(this::mapDeityToDeityResponse)
+                .map(productMapper::toDeityResponse)
                 .toList());
     }
 
@@ -118,10 +116,9 @@ public class CatalogServiceImpl implements CatalogService {
 
         Product savedProduct = productRepository.save(product);
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product created successfully",
-                mapProductToProductResponse(savedProduct)
+                productMapper.toProductResponse(savedProduct)
         );
     }
 
@@ -198,10 +195,9 @@ public class CatalogServiceImpl implements CatalogService {
         Product updatedProduct =
                 productRepository.save(product);
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product updated successfully",
-                mapProductToProductResponse(updatedProduct)
+                productMapper.toProductResponse(updatedProduct)
         );
     }
 
@@ -212,10 +208,7 @@ public class CatalogServiceImpl implements CatalogService {
             throw new ProductNotFoundException("Product not found");
         }
         productRepository.deleteById(id);
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message("Deleted the product successfully")
-                .build();
+        return ApiResponse.success("Deleted the product successfully");
     }
 
     @Override
@@ -228,9 +221,8 @@ public class CatalogServiceImpl implements CatalogService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
-        return mapToApiResponse(true,
-                "Category created successfully",
-                mapCategoryToCategoryResponse(categoryRepository.save(category)));
+        return ApiResponse.success("Category created successfully",
+                productMapper.toCategoryResponse(categoryRepository.save(category)));
     }
 
     @Override
@@ -243,9 +235,9 @@ public class CatalogServiceImpl implements CatalogService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
-        return mapToApiResponse(true,
+        return ApiResponse.success(
                 "Deity created successfully",
-                mapDeityToDeityResponse(deityRepository.save(deity)));
+                productMapper.toDeityResponse(deityRepository.save(deity)));
     }
 
     @Override
@@ -261,9 +253,9 @@ public class CatalogServiceImpl implements CatalogService {
         category.setDescription(request.getDescription());
         Category updatedCategory = categoryRepository.save(category);
 
-        return mapToApiResponse(true,
+        return ApiResponse.success(
                 "Category updated successfully",
-                mapCategoryToCategoryResponse(updatedCategory));
+                productMapper.toCategoryResponse(updatedCategory));
     }
 
     @Override
@@ -278,9 +270,9 @@ public class CatalogServiceImpl implements CatalogService {
         deity.setName(request.getName());
         deity.setDescription(request.getDescription());
         Deity updatedDeity = deityRepository.save(deity);
-        return mapToApiResponse(true,
+        return ApiResponse.success(
                 "Deity updated successfully",
-                mapDeityToDeityResponse(updatedDeity));
+                productMapper.toDeityResponse(updatedDeity));
     }
 
     @Override
@@ -293,10 +285,7 @@ public class CatalogServiceImpl implements CatalogService {
             throw new CategoryInUseException("Category already in use");
         }
         categoryRepository.deleteById(id);
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message("Deleted the category successfully")
-                .build();
+        return ApiResponse.success("Deleted the category successfully");
     }
 
     @Override
@@ -309,10 +298,7 @@ public class CatalogServiceImpl implements CatalogService {
             throw new DeityInUseException("Deity already in use");
         }
         deityRepository.deleteById(id);
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message("Deleted the deity successfully")
-                .build();
+        return ApiResponse.success("Deleted the deity successfully");
     }
 
     private String resolveOrGenerateSku(String requestedSku, String productTitle, UUID productId) {

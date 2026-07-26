@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(registry ->
                         registry.requestMatchers(HttpMethod.POST,"/api/v1/auth/**")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog/**")
+                                .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())

@@ -9,6 +9,7 @@ import com.krishna.Pujamart.catalog.model.Product;
 import com.krishna.Pujamart.catalog.model.ProductVariant;
 import com.krishna.Pujamart.catalog.repository.ProductRepository;
 import com.krishna.Pujamart.catalog.repository.ProductVariantRepository;
+import com.krishna.Pujamart.catalog.utility.ProductMapper;
 import com.krishna.Pujamart.identity.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ProductMapper productMapper;
 
     @Override
     @Transactional
@@ -48,10 +50,9 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         ProductVariant savedVariant = productVariantRepository.save(variant);
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product variant added successfully",
-                mapVariantToVariantResponse(savedVariant)
+                productMapper.toVariantResponse(savedVariant)
         );
     }
 
@@ -78,10 +79,9 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         ProductVariant updatedVariant = productVariantRepository.save(variant);
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product variant updated successfully",
-                mapVariantToVariantResponse(updatedVariant)
+                productMapper.toVariantResponse(updatedVariant)
         );
     }
 
@@ -93,10 +93,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         }
         productVariantRepository.deleteById(variantId);
 
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message("Product variant deleted successfully")
-                .build();
+        return ApiResponse.success("Product variant deleted successfully");
     }
 
     @Override
@@ -107,11 +104,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         List<ProductVariantResponse> responses = productVariantRepository.findByProductId(productId)
                 .stream()
-                .map(this::mapVariantToVariantResponse)
+                .map(productMapper::toVariantResponse)
                 .toList();
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product variants fetched successfully",
                 responses
         );
@@ -122,10 +118,9 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new ProductVariantNotFoundException("Product variant not found with ID: " + variantId));
 
-        return mapToApiResponse(
-                true,
+        return ApiResponse.success(
                 "Product variant fetched successfully",
-                mapVariantToVariantResponse(variant)
+                productMapper.toVariantResponse(variant)
         );
     }
 

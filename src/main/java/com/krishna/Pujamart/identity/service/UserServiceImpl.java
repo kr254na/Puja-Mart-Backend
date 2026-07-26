@@ -4,6 +4,7 @@ import com.krishna.Pujamart.identity.dto.*;
 import com.krishna.Pujamart.identity.exception.*;
 import com.krishna.Pujamart.identity.model.User;
 import com.krishna.Pujamart.identity.repository.UserRepository;
+import com.krishna.Pujamart.identity.utility.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,17 +16,14 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Override
     public ApiResponse<UserResponse> getProfile(String email) {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        return ApiResponse.<UserResponse>builder()
-                .success(true)
-                .message("Profile retrieved successfully")
-                .data(mapToUserResponse(user))
-                .build();
+        return ApiResponse.success("Profile retrieved successfully",userMapper.toUserResponse(user));
     }
 
     @Override
@@ -54,11 +52,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return ApiResponse.<UserResponse>builder()
-                .success(true)
-                .message("Profile updated successfully")
-                .data(mapToUserResponse(user))
-                .build();
+        return ApiResponse.success("Profile updated successfully",userMapper.toUserResponse(user));
     }
 
     @Override
@@ -74,10 +68,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        return ApiResponse.<String>builder()
-                .success(true)
-                .message("Password changed successfully")
-                .build();
+        return ApiResponse.success("Password changed successfully");
     }
 
     @Override
@@ -88,20 +79,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.delete(user);
 
-        return ApiResponse.<String>builder()
-                .success(true)
-                .message("Account deleted successfully")
-                .build();
+        return ApiResponse.success("Account deleted successfully");
     }
 
-    private UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .contact(user.getContact())
-                .role(user.getRole())
-                .build();
-    }
 }
