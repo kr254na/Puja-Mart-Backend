@@ -13,6 +13,7 @@ public class ProductVariantResponse {
     private String size;
     private String color;
     private String material;
-    private BigDecimal priceOverride;
+    private BigDecimal basePriceOverride;
+    private BigDecimal discountPriceOverride;
     private Integer stockQuantity;
 }

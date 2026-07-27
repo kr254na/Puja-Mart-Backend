@@ -1,5 +1,7 @@
 package com.krishna.Pujamart.identity.exception;
 
+import com.krishna.Pujamart.cart.exception.CartItemNotFoundException;
+import com.krishna.Pujamart.cart.exception.InvalidCartOperationException;
 import com.krishna.Pujamart.catalog.exception.*;
 import com.krishna.Pujamart.identity.dto.ApiResponse;
 import com.krishna.Pujamart.kits.exception.InvalidQuantityException;
@@ -208,6 +210,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProductVariantMismatchException.class)
     public ResponseEntity<ApiResponse<?>> handleProductVariantMismatch(Exception ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(CartItemNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleCartItemNotFound(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCartOperationException.class)
+    public ResponseEntity<ApiResponse<?>> handleInvalidCartOperation(Exception ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage()));
     }

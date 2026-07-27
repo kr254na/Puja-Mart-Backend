@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -38,11 +37,33 @@ public class ProductVariant {
 
     @DecimalMin("0.01")
     @Digits(integer = 8, fraction = 2)
-    @Column(precision = 10, scale = 2)
-    private BigDecimal priceOverride; // Optional: Override base product price for larger variants
+    @Column(name = "base_price_override", precision = 10, scale = 2)
+    private BigDecimal basePriceOverride;
+
+    @DecimalMin("0.00")
+    @Digits(integer = 8, fraction = 2)
+    @Column(name = "discount_price_override", precision = 10, scale = 2)
+    private BigDecimal discountPriceOverride;
 
     @Min(0)
     @Column(name = "stock_quantity", nullable = false)
     @Builder.Default
     private Integer stockQuantity = 0;
+
+    public String getName() {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+
+        if (size != null && !size.isBlank()) {
+            parts.add(size.trim());
+        }
+        if (color != null && !color.isBlank()) {
+            parts.add(color.trim());
+        }
+        if (material != null && !material.isBlank()) {
+            parts.add(material.trim());
+        }
+
+        return parts.isEmpty() ? "Standard" : String.join(", ", parts);
+    }
+
 }

@@ -19,8 +19,13 @@ public class ProductVariantRequest {
 
     @DecimalMin("0.01")
     @Digits(integer = 8, fraction = 2,
-            message = "Price can have up to 8 digits and 2 decimal places")
-    private BigDecimal priceOverride;
+            message = "Base Price can have up to 8 digits and 2 decimal places")
+    private BigDecimal basePriceOverride;
+
+    @DecimalMin("0.01")
+    @Digits(integer = 8, fraction = 2,
+            message = "Discount Price can have up to 8 digits and 2 decimal places")
+    private BigDecimal discountPriceOverride;
 
     @Min(value = 0, message = "Stock quantity cannot be negative")
     @NotNull
