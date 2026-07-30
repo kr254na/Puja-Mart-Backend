@@ -16,11 +16,13 @@ import com.krishna.Pujamart.identity.dto.ApiResponse;
 import com.krishna.Pujamart.kits.exception.ProductVariantMismatchException;
 import com.krishna.Pujamart.kits.exception.PujaKitNotFoundException;
 import com.krishna.Pujamart.kits.model.PujaKit;
+import com.krishna.Pujamart.kits.model.PujaKitItem;
 import com.krishna.Pujamart.kits.repository.PujaKitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
@@ -60,6 +62,17 @@ public class CartServiceImpl implements CartService {
             if (!Boolean.TRUE.equals(kit.getActive())) {
                 throw new InvalidCartOperationException("Selected Puja Kit is currently unavailable.");
             }
+
+            // Validation A: Ensure Puja Kit itself has starting prices
+            if (kit.getBasePrice() == null && kit.getDiscountPrice() == null) {
+                throw new InvalidCartOperationException("This Puja Kit is for inquiry only and cannot be added to the cart.");
+            }
+            // Validation B: Ensure no nested product in the kit has a null price
+            for (PujaKitItem item : kit.getItems()) {
+                if (item.getEffectivePrice() == null) {
+                    throw new InvalidCartOperationException("Cannot add this Puja Kit to the cart because it contains products without prices.");
+                }
+            }
         } else {
             product = productRepository.findById(request.getProductId())
                     .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + request.getProductId()));
@@ -69,6 +82,27 @@ public class CartServiceImpl implements CartService {
                         .orElseThrow(() -> new ProductVariantNotFoundException("Variant not found with ID: " + request.getVariantId()));
                 if (variant != null && !variant.getProduct().getId().equals(product.getId())) {
                     throw new ProductVariantMismatchException("The selected variant does not belong to the specified product.");
+                }
+
+                // 2. Validation: Ensure the variant (or its parent product fallback) has a price
+                BigDecimal variantPrice = (variant.getDiscountPriceOverride() != null)
+                        ? variant.getDiscountPriceOverride()
+                        : variant.getBasePriceOverride();
+
+                if (variantPrice == null) {
+                    // Fall back to check the parent product's price
+                    BigDecimal parentPrice = (product.getDiscountPrice() != null)
+                            ? product.getDiscountPrice()
+                            : product.getPrice();
+
+                    if (parentPrice == null) {
+                        throw new InvalidCartOperationException("This variant is for inquiry only and cannot be added to the cart.");
+                    }
+                }
+            } else {
+                // 3. Validation: Ensure the base product has a price
+                if (product.getPrice() == null && product.getDiscountPrice() == null) {
+                    throw new InvalidCartOperationException("This product is for inquiry only and cannot be added to the cart.");
                 }
             }
         }

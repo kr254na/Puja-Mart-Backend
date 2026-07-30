@@ -29,5 +29,7 @@ public interface RefreshTokenRepository
     @Query("UPDATE RefreshToken r SET r.revoked = true WHERE r.user = :user")
     void revokeAllByUser(@Param("user") User user);
 
-    void deleteByExpiryDateBefore(Instant now);
+    @Modifying
+    @Query("DELETE FROM RefreshToken r WHERE r.expiryDate < :now")
+    void deleteExpiredTokens(@Param("now") Instant now);
 }

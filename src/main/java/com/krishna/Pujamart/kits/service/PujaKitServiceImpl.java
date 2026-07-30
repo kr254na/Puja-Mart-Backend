@@ -1,5 +1,7 @@
 package com.krishna.Pujamart.kits.service;
 
+import com.krishna.Pujamart.cart.exception.InvalidCartOperationException;
+import com.krishna.Pujamart.cart.repository.CartItemRepository;
 import com.krishna.Pujamart.catalog.exception.DeityNotFoundException;
 import com.krishna.Pujamart.catalog.exception.InvalidDiscountPriceException;
 import com.krishna.Pujamart.catalog.exception.ProductNotFoundException;
@@ -36,6 +38,7 @@ public class PujaKitServiceImpl implements PujaKitService {
     private final DeityRepository deityRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
     private final PujaKitMapper pujaKitMapper;
 
     @Override
@@ -60,10 +63,15 @@ public class PujaKitServiceImpl implements PujaKitService {
     @Override
     @Transactional
     public ApiResponse<PujaKitResponse> createKit(PujaKitRequest request) {
-        if(request.getBasePrice()!=null && request.getDiscountPrice()!=null &&
-                request.getBasePrice().compareTo(request.getDiscountPrice())<0) {
-            throw new InvalidDiscountPriceException("Discount price cannot be greater than base price");
+        if (request.getDiscountPrice() != null) {
+            if (request.getBasePrice() == null) {
+                throw new InvalidDiscountPriceException("Discount price cannot be set without a base price");
+            }
+            if (request.getBasePrice().compareTo(request.getDiscountPrice()) < 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than base price");
+            }
         }
+
 
         if(pujaKitRepository.existsByNameIgnoreCase(request.getName())) {
             throw new PujaKitAlreadyExistsException("Puja Kit with name "+request.getName()+" already exists");
@@ -136,9 +144,13 @@ public class PujaKitServiceImpl implements PujaKitService {
     @Override
     @Transactional
     public ApiResponse<PujaKitResponse> updateKit(UUID id, PujaKitRequest request) {
-        if(request.getBasePrice()!=null && request.getDiscountPrice()!=null &&
-                request.getBasePrice().compareTo(request.getDiscountPrice())<0) {
-            throw new InvalidDiscountPriceException("Discount price cannot be greater than base price");
+        if (request.getDiscountPrice() != null) {
+            if (request.getBasePrice() == null) {
+                throw new InvalidDiscountPriceException("Discount price cannot be set without a base price");
+            }
+            if (request.getBasePrice().compareTo(request.getDiscountPrice()) < 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than base price");
+            }
         }
 
         PujaKit existingKit = pujaKitRepository.findById(id)
@@ -147,6 +159,12 @@ public class PujaKitServiceImpl implements PujaKitService {
 
         if(pujaKitRepository.existsByNameIgnoreCaseAndIdNot(request.getName(),existingKit.getId())) {
             throw new PujaKitAlreadyExistsException("Puja Kit with name "+request.getName()+" already exists");
+        }
+
+        if (request.getBasePrice() == null) {
+            if (cartItemRepository.existsByKitId(existingKit.getId())) {
+                throw new InvalidCartOperationException("Cannot remove the price of this Puja Kit because it is currently in customer carts.");
+            }
         }
 
         UUID currentDeityId = existingKit.getDeity() != null ? existingKit.getDeity().getId() : null;

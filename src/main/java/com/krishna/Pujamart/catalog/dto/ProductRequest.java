@@ -24,7 +24,6 @@ public class ProductRequest {
     @Size(max = 100, message = "SKU cannot exceed 100 characters")
     private String sku;
 
-    @NotNull(message = "Price is required")
     @DecimalMin(value = "0.01", message = "Price must be greater than zero")
     @Digits(integer = 8, fraction = 2,
             message = "Price can have up to 8 digits and 2 decimal places")

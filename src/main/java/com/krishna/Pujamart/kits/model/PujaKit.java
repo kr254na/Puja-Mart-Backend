@@ -12,7 +12,13 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "puja_kits")
+@Table(
+        name = "puja_kits",
+        indexes = {
+                @Index(name = "idx_puja_kit_deity", columnList = "deity_id")
+        }
+)
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,7 +41,7 @@ public class PujaKit {
 
     @DecimalMin("0.01")
     @Digits(integer = 8, fraction = 2)
-    @Column(precision = 10, scale = 2, nullable = false)
+    @Column(precision = 10, scale = 2)
     private BigDecimal basePrice;
 
     @DecimalMin("0.00")

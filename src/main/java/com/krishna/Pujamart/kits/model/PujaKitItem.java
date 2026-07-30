@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -50,4 +51,19 @@ public class PujaKitItem {
     @Column(name = "is_mandatory", nullable = false)
     @Builder.Default
     private Boolean isMandatory = true;
+
+    public BigDecimal getEffectivePrice() {
+        if (variant != null) {
+            if (variant.getDiscountPriceOverride() != null) {
+                return variant.getDiscountPriceOverride();
+            }
+            if (variant.getBasePriceOverride() != null) {
+                return variant.getBasePriceOverride();
+            }
+        }
+        if (product != null) {
+            return product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice();
+        }
+        return null;
+    }
 }

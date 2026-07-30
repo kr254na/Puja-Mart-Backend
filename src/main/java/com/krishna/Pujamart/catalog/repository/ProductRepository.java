@@ -15,10 +15,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @EntityGraph(attributePaths = {"category", "deity"})
     @Query(
-            value = "SELECT DISTINCT p FROM Product p " +
+            value = "SELECT p FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
                     "AND (:deityId IS NULL OR p.deity.id = :deityId)",
-            countQuery = "SELECT COUNT(DISTINCT p) FROM Product p " +
+            countQuery = "SELECT COUNT(p) FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
                     "AND (:deityId IS NULL OR p.deity.id = :deityId)"
     )

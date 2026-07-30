@@ -17,10 +17,10 @@ public interface PujaKitRepository extends JpaRepository<PujaKit, UUID> {
 
     @EntityGraph(attributePaths = {"deity"})
     @Query(
-            value = "SELECT DISTINCT k FROM PujaKit k " +
+            value = "SELECT k FROM PujaKit k " +
                     "WHERE (:deityId IS NULL OR k.deity.id = :deityId) " +
                     "AND k.active = true",
-            countQuery = "SELECT COUNT(DISTINCT k) FROM PujaKit k " +
+            countQuery = "SELECT COUNT(k) FROM PujaKit k " +
                     "WHERE (:deityId IS NULL OR k.deity.id = :deityId) " +
                     "AND k.active = true"
     )

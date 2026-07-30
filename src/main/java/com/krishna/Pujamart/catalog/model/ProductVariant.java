@@ -9,7 +9,13 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "product_variants")
+@Table(
+        name = "product_variants",
+        indexes = {
+                @Index(name = "idx_variant_product", columnList = "product_id")
+        }
+)
+
 @Getter
 @Setter
 @NoArgsConstructor

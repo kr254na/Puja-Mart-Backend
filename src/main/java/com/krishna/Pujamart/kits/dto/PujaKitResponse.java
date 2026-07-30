@@ -33,4 +33,7 @@ public class PujaKitResponse {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private BigDecimal originalPrice;
+    private Boolean hasMissingPrices;
+
 }

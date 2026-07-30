@@ -1,8 +1,11 @@
 package com.krishna.Pujamart.catalog.service;
 
+import com.krishna.Pujamart.cart.exception.InvalidCartOperationException;
+import com.krishna.Pujamart.cart.repository.CartItemRepository;
 import com.krishna.Pujamart.catalog.dto.ProductVariantRequest;
 import com.krishna.Pujamart.catalog.dto.ProductVariantResponse;
 import com.krishna.Pujamart.catalog.exception.DuplicateSkuException;
+import com.krishna.Pujamart.catalog.exception.InvalidDiscountPriceException;
 import com.krishna.Pujamart.catalog.exception.ProductNotFoundException;
 import com.krishna.Pujamart.catalog.exception.ProductVariantNotFoundException;
 import com.krishna.Pujamart.catalog.model.Product;
@@ -25,11 +28,22 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
     private final ProductMapper productMapper;
 
     @Override
     @Transactional
     public ApiResponse<ProductVariantResponse> addVariant(UUID productId, ProductVariantRequest request) {
+        if (request.getDiscountPriceOverride() != null) {
+            if (request.getBasePriceOverride() == null) {
+                throw new InvalidDiscountPriceException("Discount price override cannot be set without a base price override");
+            }
+            if (request.getDiscountPriceOverride().compareTo(request.getBasePriceOverride()) > 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than variant price");
+            }
+        }
+
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + productId));
 
@@ -60,10 +74,29 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     @Override
     @Transactional
     public ApiResponse<ProductVariantResponse> updateVariant(UUID variantId, ProductVariantRequest request) {
+        if (request.getDiscountPriceOverride() != null) {
+            if (request.getBasePriceOverride() == null) {
+                throw new InvalidDiscountPriceException("Discount price override cannot be set without a base price override");
+            }
+            if (request.getDiscountPriceOverride().compareTo(request.getBasePriceOverride()) > 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than variant price");
+            }
+        }
+
+
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new ProductVariantNotFoundException("Product variant not found with ID: " + variantId));
 
         Product product = variant.getProduct();
+
+        if (request.getBasePriceOverride() == null && request.getDiscountPriceOverride() == null) {
+            // If the variant becomes priceless because the parent product also has no price
+            if (product.getPrice() == null && product.getDiscountPrice() == null) {
+                if (cartItemRepository.existsByVariantId(variant.getId())) {
+                    throw new InvalidCartOperationException("Cannot remove the price override of this variant because it is in customer carts and the parent product has no price.");
+                }
+            }
+        }
 
         String variantSku = resolveOrGenerateVariantSku(
                 request.getSku(),

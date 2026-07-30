@@ -11,7 +11,15 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "cart_items")
+@Table(
+        name = "cart_items",
+        indexes = {
+                @Index(name = "idx_cart_item_product", columnList = "product_id"),
+                @Index(name = "idx_cart_item_variant", columnList = "variant_id"),
+                @Index(name = "idx_cart_item_kit", columnList = "kit_id")
+        }
+)
+
 @Getter
 @Setter
 @NoArgsConstructor

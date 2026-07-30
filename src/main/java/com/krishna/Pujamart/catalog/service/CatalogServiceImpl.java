@@ -1,5 +1,7 @@
 package com.krishna.Pujamart.catalog.service;
 
+import com.krishna.Pujamart.cart.exception.InvalidCartOperationException;
+import com.krishna.Pujamart.cart.repository.CartItemRepository;
 import com.krishna.Pujamart.catalog.dto.*;
 import com.krishna.Pujamart.catalog.exception.*;
 import com.krishna.Pujamart.catalog.model.*;
@@ -23,6 +25,7 @@ public class CatalogServiceImpl implements CatalogService {
     private final CategoryRepository categoryRepository;
     private final DeityRepository deityRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -63,14 +66,15 @@ public class CatalogServiceImpl implements CatalogService {
     @Transactional
     public ApiResponse<ProductResponse> createProduct(ProductRequest request) {
 
-        if (request.getDiscountPrice() != null &&
-                request.getPrice() != null &&
-                request.getDiscountPrice().compareTo(request.getPrice()) > 0) {
-
-            throw new InvalidDiscountPriceException(
-                    "Discount price cannot be greater than product price"
-            );
+        if (request.getDiscountPrice() != null) {
+            if (request.getPrice() == null) {
+                throw new InvalidDiscountPriceException("Discount price cannot be set without a product price");
+            }
+            if (request.getDiscountPrice().compareTo(request.getPrice()) > 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than product price");
+            }
         }
+
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() ->
@@ -128,13 +132,13 @@ public class CatalogServiceImpl implements CatalogService {
             UUID id,
             ProductRequest request) {
 
-        if (request.getDiscountPrice() != null &&
-                request.getPrice() != null &&
-                request.getDiscountPrice().compareTo(request.getPrice()) > 0) {
-
-            throw new InvalidDiscountPriceException(
-                    "Discount price cannot be greater than product price"
-            );
+        if (request.getDiscountPrice() != null) {
+            if (request.getPrice() == null) {
+                throw new InvalidDiscountPriceException("Discount price cannot be set without a product price");
+            }
+            if (request.getDiscountPrice().compareTo(request.getPrice()) > 0) {
+                throw new InvalidDiscountPriceException("Discount price cannot be greater than product price");
+            }
         }
 
         Product product = productRepository.findById(id)
@@ -156,6 +160,17 @@ public class CatalogServiceImpl implements CatalogService {
                                 "Deity not found with ID: "
                                         + request.getDeityId()
                         ));
+
+        if (request.getPrice() == null) {
+            // Check if the product itself is in a cart
+            if (cartItemRepository.existsByProductId(product.getId())) {
+                throw new InvalidCartOperationException("Cannot remove the price of this product because it is currently in customer carts.");
+            }
+            // Check if any variant relying on this product's price is in a cart
+            if (cartItemRepository.existsPricelessVariantInCart(product.getId())) {
+                throw new InvalidCartOperationException("Cannot remove the price of this product because its variants are in customer carts relying on this price.");
+            }
+        }
 
         String baseSku = resolveOrGenerateSku(request.getSku(), request.getName(), product.getId());
 

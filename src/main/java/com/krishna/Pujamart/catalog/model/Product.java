@@ -48,7 +48,7 @@ public class Product {
 
     @DecimalMin("0.01")
     @Digits(integer = 8, fraction = 2)
-    @Column(precision = 10, scale = 2, nullable = false)
+    @Column(precision = 10, scale = 2)
     private BigDecimal price;
 
     @DecimalMin("0.00")
