@@ -38,7 +38,7 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Override
     public ApiResponse<ProductResponse> getProductById(UUID id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findProductWithDetailsById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + id));
         return ApiResponse.success("Product fetched successfully",
                 productMapper.toProductResponse(product));

@@ -16,7 +16,12 @@ import java.util.UUID;
         name = "puja_kits",
         indexes = {
                 @Index(name = "idx_puja_kit_deity", columnList = "deity_id")
-        }
+        },
+        check = @CheckConstraint(
+                name = "chk_puja_kit_pricing",
+                constraint = "(base_price IS NULL OR base_price >= 0.01) AND " +
+                        "(discount_price IS NULL OR (discount_price >= 0.00 AND (base_price IS NOT NULL AND discount_price <= base_price)))"
+        )
 )
 
 @Getter
@@ -87,4 +92,19 @@ public class PujaKit {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public BigDecimal getActualPrice() {
+        if (items == null || items.isEmpty()) {
+            return discountPrice != null ? discountPrice : (basePrice != null ? basePrice : BigDecimal.ZERO);
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (PujaKitItem item : items) {
+            BigDecimal price = item.getEffectivePrice();
+            if (price != null) {
+                total = total.add(price.multiply(BigDecimal.valueOf(item.getDefaultQuantity())));
+            }
+        }
+        return total;
+    }
+
 }

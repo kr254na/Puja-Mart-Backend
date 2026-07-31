@@ -18,8 +18,18 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_product_category", columnList = "category_id"),
                 @Index(name = "idx_product_deity", columnList = "deity_id")
-        }
-)
+        },
+        check = @CheckConstraint(
+            name = "chk_product_pricing_stock",
+            constraint =
+                "(price IS NULL OR price >= 0.01) AND " +
+                        "(discount_price IS NULL OR " +
+                        "(price IS NOT NULL " +
+                        "AND discount_price >= 0.00 " +
+                        "AND discount_price <= price)) AND " +
+                        "stock_quantity >= 0"
+            )
+        )
 @Getter
 @Setter
 @NoArgsConstructor
@@ -79,7 +89,7 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY,optional = false)
     @JoinColumn(name = "deity_id", nullable = false)
     private Deity deity;
 

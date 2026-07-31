@@ -8,6 +8,7 @@ import com.krishna.Pujamart.kits.exception.InvalidQuantityException;
 import com.krishna.Pujamart.kits.exception.ProductVariantMismatchException;
 import com.krishna.Pujamart.kits.exception.PujaKitAlreadyExistsException;
 import com.krishna.Pujamart.kits.exception.PujaKitNotFoundException;
+import com.krishna.Pujamart.wishlist.exception.WishlistItemNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -223,6 +224,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCartOperationException.class)
     public ResponseEntity<ApiResponse<?>> handleInvalidCartOperation(Exception ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(WishlistItemNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleWishlistItemNotFound(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 

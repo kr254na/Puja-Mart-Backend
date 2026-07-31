@@ -10,7 +10,15 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "puja_kit_items")
+@Table(name = "puja_kit_items",
+        check = @CheckConstraint(
+                name = "chk_puja_kit_item_quantities",
+                constraint = "default_quantity >= 1 AND " +
+                        "min_quantity >= 1 AND " +
+                        "(max_quantity IS NULL OR max_quantity >= min_quantity) AND " +
+                        "default_quantity >= min_quantity AND " +
+                        "(max_quantity IS NULL OR default_quantity <= max_quantity)"
+        ))
 @Getter
 @Setter
 @NoArgsConstructor

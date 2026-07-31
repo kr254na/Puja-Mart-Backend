@@ -48,13 +48,16 @@ public class CartItem {
     private PujaKit kit;
 
     @Min(1)
-    @Column(nullable = false)
     @Builder.Default
+    @Column(
+            nullable = false,
+            check = @CheckConstraint(name = "chk_cart_item_qty", constraint = "quantity >= 1")
+    )
     private Integer quantity = 1;
 
     public BigDecimal getUnitPrice() {
         if (kit != null) {
-            return kit.getDiscountPrice() != null ? kit.getDiscountPrice() : kit.getBasePrice();
+            return kit.getActualPrice();
         }
 
         if (variant != null) {

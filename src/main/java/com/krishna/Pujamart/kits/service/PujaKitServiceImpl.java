@@ -60,6 +60,7 @@ public class PujaKitServiceImpl implements PujaKitService {
                 pujaKitMapper.toPujaKitResponse(kit));
     }
 
+
     @Override
     @Transactional
     public ApiResponse<PujaKitResponse> createKit(PujaKitRequest request) {
@@ -94,33 +95,55 @@ public class PujaKitServiceImpl implements PujaKitService {
 
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             Set<String> uniqueItems = new HashSet<>();
+            List<UUID> productIds = new ArrayList<>();
+            List<UUID> variantIds = new ArrayList<>();
             for (PujaKitItemRequest item : request.getItems()) {
                 String uniqueKey = item.getProductId() + "_" + (item.getVariantId() != null ? item.getVariantId() : "none");
                 if (!uniqueItems.add(uniqueKey)) {
                     throw new ItemAlreadyExistsInKitException("Duplicate product/variant combination found in the kit items.");
                 }
+                productIds.add(item.getProductId());
+                if (item.getVariantId() != null) {
+                    variantIds.add(item.getVariantId());
+                }
             }
 
-            List<PujaKitItem> kitItems = request.getItems().stream().map(itemRequest -> {
+            // Bulk fetch products
+            List<Product> products = productRepository.findAllById(productIds);
+            Map<UUID, Product> productMap = new HashMap<>();
+            for (Product p : products) {
+                productMap.put(p.getId(), p);
+            }
+            // Bulk fetch variants
+            Map<UUID, ProductVariant> variantMap = new HashMap<>();
+            if (!variantIds.isEmpty()) {
+                List<ProductVariant> variants = productVariantRepository.findAllById(variantIds);
+                for (ProductVariant v : variants) {
+                    variantMap.put(v.getId(), v);
+                }
+            }
 
+            List<PujaKitItem> kitItems = new ArrayList<>();
+            for (PujaKitItemRequest itemRequest : request.getItems()) {
                 if (itemRequest.getMinQuantity() > itemRequest.getDefaultQuantity() ||
                         (itemRequest.getMaxQuantity() != null && itemRequest.getDefaultQuantity() > itemRequest.getMaxQuantity())) {
                     throw new InvalidQuantityException("Invalid quantity limits.");
                 }
-
-                Product product = productRepository.findById(itemRequest.getProductId())
-                        .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + itemRequest.getProductId()));
-
+                Product product = productMap.get(itemRequest.getProductId());
+                if (product == null) {
+                    throw new ProductNotFoundException("Product not found with ID: " + itemRequest.getProductId());
+                }
                 ProductVariant variant = null;
                 if (itemRequest.getVariantId() != null) {
-                    variant = productVariantRepository.findById(itemRequest.getVariantId())
-                            .orElseThrow(() -> new ProductVariantNotFoundException("Variant not found"));
+                    variant = variantMap.get(itemRequest.getVariantId());
+                    if (variant == null) {
+                        throw new ProductVariantNotFoundException("Variant not found with ID: " + itemRequest.getVariantId());
+                    }
                     if (!variant.getProduct().getId().equals(product.getId())) {
                         throw new ProductVariantMismatchException("Variant does not belong to the selected product.");
                     }
                 }
-
-                return PujaKitItem.builder()
+                kitItems.add(PujaKitItem.builder()
                         .kit(pujaKit)
                         .product(product)
                         .variant(variant)
@@ -128,18 +151,16 @@ public class PujaKitServiceImpl implements PujaKitService {
                         .minQuantity(itemRequest.getMinQuantity())
                         .maxQuantity(itemRequest.getMaxQuantity())
                         .isMandatory(itemRequest.getIsMandatory() != null ? itemRequest.getIsMandatory() : true)
-                        .build();
-            }).toList();
-
+                        .build());
+            }
             pujaKit.getItems().addAll(kitItems);
         }
-
         PujaKit savedKit = pujaKitRepository.save(pujaKit);
-
         return ApiResponse.success(
                 "Kit created successfully",
                 pujaKitMapper.toPujaKitResponse(savedKit));
     }
+
 
     @Override
     @Transactional
@@ -156,9 +177,8 @@ public class PujaKitServiceImpl implements PujaKitService {
         PujaKit existingKit = pujaKitRepository.findById(id)
                 .orElseThrow(() -> new PujaKitNotFoundException("PujaKit not found with ID: " + id));
 
-
-        if(pujaKitRepository.existsByNameIgnoreCaseAndIdNot(request.getName(),existingKit.getId())) {
-            throw new PujaKitAlreadyExistsException("Puja Kit with name "+request.getName()+" already exists");
+        if (pujaKitRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), existingKit.getId())) {
+            throw new PujaKitAlreadyExistsException("Puja Kit with name " + request.getName() + " already exists");
         }
 
         if (request.getBasePrice() == null) {
@@ -192,42 +212,70 @@ public class PujaKitServiceImpl implements PujaKitService {
 
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             Set<String> uniqueItems = new HashSet<>();
+            List<UUID> productIds = new ArrayList<>();
+            List<UUID> variantIds = new ArrayList<>();
+
+            // Verify duplicates and collect IDs for bulk fetching
             for (PujaKitItemRequest item : request.getItems()) {
                 String uniqueKey = item.getProductId() + "_" + (item.getVariantId() != null ? item.getVariantId() : "none");
                 if (!uniqueItems.add(uniqueKey)) {
                     throw new ItemAlreadyExistsInKitException("Duplicate product/variant combination found in the kit items.");
                 }
+                productIds.add(item.getProductId());
+                if (item.getVariantId() != null) {
+                    variantIds.add(item.getVariantId());
+                }
             }
 
-            List<PujaKitItem> updatedItems = request.getItems().stream().map(itemRequest -> {
+            // Bulk fetch products
+            List<Product> products = productRepository.findAllById(productIds);
+            Map<UUID, Product> productMap = new HashMap<>();
+            for (Product p : products) {
+                productMap.put(p.getId(), p);
+            }
 
+            // Bulk fetch variants
+            Map<UUID, ProductVariant> variantMap = new HashMap<>();
+            if (!variantIds.isEmpty()) {
+                List<ProductVariant> variants = productVariantRepository.findAllById(variantIds);
+                for (ProductVariant v : variants) {
+                    variantMap.put(v.getId(), v);
+                }
+            }
+
+            List<PujaKitItem> updatedItems = new ArrayList<>();
+            for (PujaKitItemRequest itemRequest : request.getItems()) {
                 if (itemRequest.getMinQuantity() > itemRequest.getDefaultQuantity() ||
                         (itemRequest.getMaxQuantity() != null && itemRequest.getDefaultQuantity() > itemRequest.getMaxQuantity())) {
                     throw new InvalidQuantityException("Invalid quantity limits.");
                 }
 
-                Product product = productRepository.findById(itemRequest.getProductId())
-                        .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + itemRequest.getProductId()));
+                Product product = productMap.get(itemRequest.getProductId());
+                if (product == null) {
+                    throw new ProductNotFoundException("Product not found with ID: " + itemRequest.getProductId());
+                }
 
                 ProductVariant variant = null;
                 if (itemRequest.getVariantId() != null) {
-                    variant = productVariantRepository.findById(itemRequest.getVariantId())
-                            .orElseThrow(() -> new ProductVariantNotFoundException("Variant not found"));
+                    variant = variantMap.get(itemRequest.getVariantId());
+                    if (variant == null) {
+                        throw new ProductVariantNotFoundException("Variant not found with ID: " + itemRequest.getVariantId());
+                    }
                     if (!variant.getProduct().getId().equals(product.getId())) {
                         throw new ProductVariantMismatchException("Variant does not belong to the selected product.");
                     }
                 }
 
-                return PujaKitItem.builder()
-                        .kit(existingKit) // Link back to existing parent entity
+                updatedItems.add(PujaKitItem.builder()
+                        .kit(existingKit)
                         .product(product)
                         .variant(variant)
                         .defaultQuantity(itemRequest.getDefaultQuantity())
                         .minQuantity(itemRequest.getMinQuantity())
                         .maxQuantity(itemRequest.getMaxQuantity())
                         .isMandatory(itemRequest.getIsMandatory() != null ? itemRequest.getIsMandatory() : true)
-                        .build();
-            }).toList();
+                        .build());
+            }
 
             existingKit.getItems().addAll(updatedItems);
         }
@@ -237,6 +285,7 @@ public class PujaKitServiceImpl implements PujaKitService {
                 "Kit updated successfully",
                 pujaKitMapper.toPujaKitResponse(savedKit));
     }
+
 
     @Override
     @Transactional

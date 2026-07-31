@@ -8,12 +8,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID> {
 
-    @EntityGraph(attributePaths = {"category", "deity"})
+    @EntityGraph(attributePaths = {"category", "deity","variants"})
     @Query(
             value = "SELECT p FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
@@ -27,6 +29,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             @Param("deityId") UUID deityId,
             Pageable pageable
     );
+
+    @EntityGraph(attributePaths = {"category", "deity", "variants"})
+    Optional<Product> findProductWithDetailsById(UUID id);
+
     boolean existsByCategoryId(UUID id);
     boolean existsByDeityId(UUID id);
     boolean existsBySku(String sku);
