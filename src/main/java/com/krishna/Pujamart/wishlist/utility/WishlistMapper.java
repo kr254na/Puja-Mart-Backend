@@ -25,27 +25,50 @@ public interface WishlistMapper {
                 .id(item.getId())
                 .addedAt(item.getAddedAt());
 
-        if (item.getKit() != null) {
+        String imageUrl = null;
 
+        if (item.getKit() != null) {
+            imageUrl = (item.getKit().getImageUrls() != null && !item.getKit().getImageUrls().isEmpty())
+                    ? item.getKit().getImageUrls().get(0)
+                    : null;
             builder.itemType("KIT")
                     .referenceId(item.getKit().getId())
                     .name(item.getKit().getName())
                     .sku(null)
+                    .imageUrl(imageUrl)
                     .price(item.getKit().getActualPrice())
                     .inStock(true);
         } else if (item.getProduct() != null) {
+            imageUrl = (item.getProduct().getImageUrls() != null && !item.getProduct().getImageUrls().isEmpty())
+                    ? item.getProduct().getImageUrls().get(0)
+                    : null;
             builder.itemType("PRODUCT")
                     .referenceId(item.getProduct().getId())
                     .name(item.getProduct().getName())
-                    .imageUrl(item.getProduct().getImageUrls().getFirst());
+                    .imageUrl(imageUrl);
 
             if (item.getVariant() != null) {
+                BigDecimal effectivePrice = null;
+
+                if (item.getVariant().getDiscountPriceOverride() != null) {
+                    effectivePrice = item.getVariant().getDiscountPriceOverride();
+                } else if (item.getVariant().getBasePriceOverride() != null) {
+                    effectivePrice = item.getVariant().getBasePriceOverride();
+                } else if (item.getProduct() != null) {
+                    effectivePrice = item.getProduct().getDiscountPrice() != null
+                            ? item.getProduct().getDiscountPrice()
+                            : item.getProduct().getPrice();
+                }
+
                 builder.sku(item.getVariant().getSku())
-                        .price(item.getVariant().getDiscountPriceOverride())
+                        .price(effectivePrice)
                         .inStock(item.getVariant().getStockQuantity() > 0);
-            } else {
+            }else {
+                BigDecimal effectivePrice = item.getProduct().getDiscountPrice() != null
+                        ? item.getProduct().getDiscountPrice()
+                        : item.getProduct().getPrice();
                 builder.sku(item.getProduct().getSku())
-                        .price(item.getProduct().getDiscountPrice())
+                        .price(effectivePrice)
                         .inStock(item.getProduct().getStockQuantity() > 0);
             }
         }

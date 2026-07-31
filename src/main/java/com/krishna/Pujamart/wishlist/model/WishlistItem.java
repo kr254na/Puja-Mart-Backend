@@ -17,10 +17,9 @@ import java.util.UUID;
                 @Index(name = "idx_wishlist_kit", columnList = "wishlist_id, kit_id")
         },
         check = @CheckConstraint(
-                name = "chk_product_pricing_stock",
-                constraint = "price >= 0.01 AND " +
-                        "(discount_price IS NULL OR (discount_price >= 0.00 AND discount_price <= price)) AND " +
-                        "stock_quantity >= 0"
+                name = "chk_wishlist_item_type",
+                constraint = "(kit_id IS NOT NULL AND product_id IS NULL AND variant_id IS NULL) OR " +
+                        "(kit_id IS NULL AND product_id IS NOT NULL)"
         )
 )
 @Getter

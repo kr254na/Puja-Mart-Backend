@@ -17,12 +17,12 @@ public class ProductVariantRequest {
     @Size(max = 100, message = "Material cannot exceed 100 characters")
     private String material;
 
-    @DecimalMin("0.01")
+    @DecimalMin(value = "0.01", message = "Price must be greater than zero")
     @Digits(integer = 8, fraction = 2,
             message = "Base Price can have up to 8 digits and 2 decimal places")
     private BigDecimal basePriceOverride;
 
-    @DecimalMin("0.01")
+    @DecimalMin(value = "0.00", message = "Discount price cannot be negative")
     @Digits(integer = 8, fraction = 2,
             message = "Discount Price can have up to 8 digits and 2 decimal places")
     private BigDecimal discountPriceOverride;
