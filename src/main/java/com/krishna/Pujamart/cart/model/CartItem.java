@@ -11,15 +11,18 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "cart_items",
-        indexes = {
-                @Index(name = "idx_cart_item_product", columnList = "product_id"),
-                @Index(name = "idx_cart_item_variant", columnList = "variant_id"),
-                @Index(name = "idx_cart_item_kit", columnList = "kit_id")
-        }
-)
-
+@Table(name = "cart_items",
+                indexes = {
+                        @Index(name = "idx_cart_item_product", columnList = "product_id"),
+                        @Index(name = "idx_cart_item_variant", columnList = "variant_id"),
+                        @Index(name = "idx_cart_item_kit", columnList = "kit_id")
+        },
+                check = @CheckConstraint(
+                        name = "chk_cart_item_type",
+                        constraint = "(kit_id IS NOT NULL AND product_id IS NULL AND variant_id IS NULL) OR " +
+                                "(kit_id IS NULL AND product_id IS NOT NULL)"
+                )
+        )
 @Getter
 @Setter
 @NoArgsConstructor

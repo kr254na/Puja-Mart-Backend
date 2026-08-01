@@ -35,5 +35,6 @@ public class PujaKitResponse {
     private LocalDateTime updatedAt;
     private BigDecimal originalPrice;
     private Boolean hasMissingPrices;
+    private Boolean inStock;
 
 }

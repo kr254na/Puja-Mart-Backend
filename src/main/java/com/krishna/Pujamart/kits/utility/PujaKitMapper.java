@@ -13,6 +13,7 @@ public interface PujaKitMapper {
 
     @Mapping(target = "originalPrice", expression = "java(pujaKit.getActualPrice())")
     @Mapping(target = "hasMissingPrices", expression = "java(checkHasMissingPrices(pujaKit))")
+    @Mapping(target = "inStock", expression = "java(checkInStock(pujaKit))")
     PujaKitResponse toPujaKitResponse(PujaKit pujaKit);
 
     @Mapping(target = "productResponse", source = "product")
@@ -30,6 +31,30 @@ public interface PujaKitMapper {
             }
         }
         return false;
+    }
+
+    // Helper: Checks if all mandatory items in the kit have sufficient stock
+    default Boolean checkInStock(PujaKit kit) {
+        if (kit == null || kit.getItems() == null || kit.getItems().isEmpty()) {
+            return false;
+        }
+        for (PujaKitItem item : kit.getItems()) {
+            if (Boolean.TRUE.equals(item.getIsMandatory())) {
+                int required = item.getDefaultQuantity() != null ? item.getDefaultQuantity() : 1;
+                if (item.getVariant() != null) {
+                    if (item.getVariant().getStockQuantity() == null || item.getVariant().getStockQuantity() < required) {
+                        return false;
+                    }
+                } else if (item.getProduct() != null) {
+                    if (item.getProduct().getStockQuantity() == null || item.getProduct().getStockQuantity() < required) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
 

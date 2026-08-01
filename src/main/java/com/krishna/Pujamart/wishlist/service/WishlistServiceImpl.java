@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -38,10 +39,21 @@ public class WishlistServiceImpl implements WishlistService {
     @Transactional(readOnly = true)
     public ApiResponse<WishlistResponse> getWishlistByUserId(UUID userId) {
         Wishlist wishlist = getOrCreateWishlist(userId);
+        // Pre-fetch nested details for any kits inside the wishlist
+        List<UUID> kitIds = wishlist.getItems().stream()
+                .map(WishlistItem::getKit)
+                .filter(Objects::nonNull)
+                .map(PujaKit::getId)
+                .toList();
+                if (!kitIds.isEmpty()) {
+                        pujaKitRepository.findAllWithItemsAndDetailsByIds(kitIds);
+                    }
+
         return ApiResponse.success(
                 "Wishlist retrieved successfully",
                 wishlistMapper.toWishlistResponse(wishlist));
     }
+
 
     @Override
     @Transactional

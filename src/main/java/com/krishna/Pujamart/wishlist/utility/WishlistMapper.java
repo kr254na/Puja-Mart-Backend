@@ -28,6 +28,15 @@ public interface WishlistMapper {
         String imageUrl = null;
 
         if (item.getKit() != null) {
+            boolean inStock = item.getKit().getItems().stream()
+                    .allMatch(kitItem -> {
+                        int required = kitItem.getDefaultQuantity();
+                        if (kitItem.getVariant() != null) {
+                            return kitItem.getVariant().getStockQuantity() >= required;
+                        }
+                        return kitItem.getProduct().getStockQuantity() >= required;
+                    });
+
             imageUrl = (item.getKit().getImageUrls() != null && !item.getKit().getImageUrls().isEmpty())
                     ? item.getKit().getImageUrls().get(0)
                     : null;
@@ -37,7 +46,7 @@ public interface WishlistMapper {
                     .sku(null)
                     .imageUrl(imageUrl)
                     .price(item.getKit().getActualPrice())
-                    .inStock(true);
+                    .inStock(inStock);
         } else if (item.getProduct() != null) {
             imageUrl = (item.getProduct().getImageUrls() != null && !item.getProduct().getImageUrls().isEmpty())
                     ? item.getProduct().getImageUrls().get(0)

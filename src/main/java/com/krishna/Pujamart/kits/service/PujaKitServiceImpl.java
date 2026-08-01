@@ -43,11 +43,17 @@ public class PujaKitServiceImpl implements PujaKitService {
 
     @Override
     public ApiResponse<Page<PujaKitResponse>> getFilteredKits(UUID deityId, Pageable pageable) {
-        return ApiResponse.success(
+                Page<PujaKit> kitsPage = pujaKitRepository.findFilteredKits(deityId, pageable);
+
+                       // Pre-fetch items and details in bulk if page has content
+        if (!kitsPage.isEmpty()) {
+                        List<UUID> kitIds = kitsPage.getContent().stream().map(PujaKit::getId).toList();
+                        pujaKitRepository.findAllWithItemsAndDetailsByIds(kitIds);
+                    }
+
+                        return ApiResponse.success(
                 "Kits fetched successfully",
-                pujaKitRepository
-                        .findFilteredKits(deityId, pageable)
-                        .map(pujaKitMapper::toPujaKitResponse));
+                kitsPage.map(pujaKitMapper::toPujaKitResponse));
     }
 
     @Override

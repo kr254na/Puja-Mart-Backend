@@ -23,10 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +40,19 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public ApiResponse<CartResponse> getCart(UUID userId) {
         Cart cart = getOrCreateCartEntity(userId);
+        
+        // Warm up cache for kit items and details in bulk if any exist
+        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+            List<UUID> kitIds = cart.getItems().stream()
+                    .map(CartItem::getKit)
+                    .filter(Objects::nonNull)
+                    .map(PujaKit::getId)
+                    .toList();
+            if (!kitIds.isEmpty()) {
+                pujaKitRepository.findAllWithItemsAndDetailsByIds(kitIds);
+            }
+        }
+        
         return ApiResponse.success("Cart retrieved successfully", cartMapper.toCartResponse(cart));
     }
 
@@ -57,11 +67,8 @@ public class CartServiceImpl implements CartService {
         PujaKit kit = null;
 
         if (request.getKitId() != null) {
-            kit = pujaKitRepository.findById(request.getKitId())
-                    .orElseThrow(() -> new PujaKitNotFoundException("PujaKit not found with ID: " + request.getKitId()));
-            if (!Boolean.TRUE.equals(kit.getActive())) {
-                throw new InvalidCartOperationException("Selected Puja Kit is currently unavailable.");
-            }
+            kit = pujaKitRepository.findActiveByIdWithDetails(request.getKitId())
+                    .orElseThrow(() -> new PujaKitNotFoundException("PujaKit not found or is inactive with ID: " + request.getKitId()));
 
             // Validation A: Ensure Puja Kit itself has starting prices
             if (kit.getBasePrice() == null && kit.getDiscountPrice() == null) {
@@ -109,17 +116,40 @@ public class CartServiceImpl implements CartService {
 
         // Check if item already exists in cart
         Optional<CartItem> existingItemOpt = findMatchingCartItem(cart, request);
+        int finalQuantity = request.getQuantity();
+        if (existingItemOpt.isPresent()) {
+            finalQuantity += existingItemOpt.get().getQuantity();
+        }
+
+        // Validate stock with the final cumulative quantity
+        if (kit != null) {
+            validateKitStockForCart(kit, finalQuantity);
+        } else if (variant != null) {
+            if (variant.getStockQuantity() < finalQuantity) {
+                throw new InvalidCartOperationException(
+                        "Insufficient stock for variant: " + variant.getSku() +
+                                " (Available: " + variant.getStockQuantity() + ")"
+                );
+            }
+        } else if (product != null) {
+            if (product.getStockQuantity() < finalQuantity) {
+                throw new InvalidCartOperationException(
+                        "Insufficient stock for product: " + product.getName() +
+                                " (Available: " + product.getStockQuantity() + ")"
+                );
+            }
+        }
 
         if (existingItemOpt.isPresent()) {
             CartItem existingItem = existingItemOpt.get();
-            existingItem.setQuantity(existingItem.getQuantity() + request.getQuantity());
+            existingItem.setQuantity(finalQuantity);
         } else {
             CartItem newItem = CartItem.builder()
                     .cart(cart)
                     .product(product)
                     .variant(variant)
                     .kit(kit)
-                    .quantity(request.getQuantity())
+                    .quantity(finalQuantity)
                     .build();
             cart.addItem(newItem);
         }
@@ -137,11 +167,55 @@ public class CartServiceImpl implements CartService {
                 .findFirst()
                 .orElseThrow(() -> new CartItemNotFoundException("Cart item not found with ID: " + itemId));
 
-        item.setQuantity(request.getQuantity());
+        int newQuantity = request.getQuantity();
+
+        // 1. Check stock based on the item type (Kit, Variant, or Product)
+        if (item.getKit() != null) {
+            // Check stock of every item inside the Puja Kit for the new quantity
+            for (PujaKitItem kitItem : item.getKit().getItems()) {
+                int requiredStock = kitItem.getDefaultQuantity() * newQuantity;
+
+                if (kitItem.getVariant() != null) {
+                    if (kitItem.getVariant().getStockQuantity() < requiredStock) {
+                        throw new InvalidCartOperationException(
+                                "Insufficient stock for kit item: " + kitItem.getVariant().getSku() +
+                                        " (Available: " + kitItem.getVariant().getStockQuantity() + ")"
+                        );
+                    }
+                } else if (kitItem.getProduct() != null) {
+                    if (kitItem.getProduct().getStockQuantity() < requiredStock) {
+                        throw new InvalidCartOperationException(
+                                "Insufficient stock for kit item: " + kitItem.getProduct().getName() +
+                                        " (Available: " + kitItem.getProduct().getStockQuantity() + ")"
+                        );
+                    }
+                }
+            }
+        } else if (item.getVariant() != null) {
+            // Check stock of the product variant
+            if (item.getVariant().getStockQuantity() < newQuantity) {
+                throw new InvalidCartOperationException(
+                        "Insufficient stock for variant: " + item.getVariant().getSku() +
+                                " (Available: " + item.getVariant().getStockQuantity() + ")"
+                );
+            }
+        } else if (item.getProduct() != null) {
+            // Check stock of the base product
+            if (item.getProduct().getStockQuantity() < newQuantity) {
+                throw new InvalidCartOperationException(
+                        "Insufficient stock for product: " + item.getProduct().getName() +
+                                " (Available: " + item.getProduct().getStockQuantity() + ")"
+                );
+            }
+        }
+
+        // 2. If validation passes, update quantity and save
+        item.setQuantity(newQuantity);
         Cart savedCart = cartRepository.save(cart);
 
         return ApiResponse.success("Cart item quantity updated successfully", cartMapper.toCartResponse(savedCart));
     }
+
 
     @Override
     public ApiResponse<CartResponse> removeItemFromCart(UUID userId, UUID itemId) {
@@ -183,6 +257,21 @@ public class CartServiceImpl implements CartService {
             throw new InvalidCartOperationException("Cannot add both a Puja Kit and a individual Product in a single item request.");
         }
 
+    }
+
+    private void validateKitStockForCart(PujaKit kit, int cartQuantity) {
+        for (PujaKitItem kitItem : kit.getItems()) {
+            int requiredStock = kitItem.getDefaultQuantity() * cartQuantity;
+            if (kitItem.getVariant() != null) {
+                if (kitItem.getVariant().getStockQuantity() < requiredStock) {
+                    throw new InvalidCartOperationException("Not enough stock for kit item: " + kitItem.getVariant().getSku());
+                }
+            } else if (kitItem.getProduct() != null) {
+                if (kitItem.getProduct().getStockQuantity() < requiredStock) {
+                    throw new InvalidCartOperationException("Not enough stock for kit item: " + kitItem.getProduct().getName());
+                }
+            }
+        }
     }
 
     private Optional<CartItem> findMatchingCartItem(Cart cart, AddToCartRequest request) {

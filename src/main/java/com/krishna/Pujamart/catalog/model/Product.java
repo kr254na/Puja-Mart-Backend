@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 
 @Entity
 @Table(
@@ -80,6 +83,7 @@ public class Product {
     private Boolean featured = false;
 
     @ElementCollection
+    @Fetch(FetchMode.SUBSELECT)
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url", nullable = false)
     @Builder.Default

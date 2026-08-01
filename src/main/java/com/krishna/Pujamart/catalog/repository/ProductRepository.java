@@ -9,13 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID> {
 
-    @EntityGraph(attributePaths = {"category", "deity","variants"})
+    @EntityGraph(attributePaths = {"category", "deity"})
     @Query(
             value = "SELECT p FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
@@ -32,6 +33,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @EntityGraph(attributePaths = {"category", "deity", "variants"})
     Optional<Product> findProductWithDetailsById(UUID id);
+ 
+    @EntityGraph(attributePaths = {"variants"})
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids")
+    List<Product> findAllWithVariantsByIds(@Param("ids") List<UUID> ids);
 
     boolean existsByCategoryId(UUID id);
     boolean existsByDeityId(UUID id);

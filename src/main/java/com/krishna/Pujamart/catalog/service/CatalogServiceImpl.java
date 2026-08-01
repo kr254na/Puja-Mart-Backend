@@ -30,10 +30,15 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Override
     public ApiResponse<Page<ProductResponse>> getFilteredProducts(UUID categoryId, UUID deityId, Pageable pageable) {
+        Page<Product> productsPage = productRepository.findFilteredCatalog(categoryId, deityId, pageable);
+
+        if (!productsPage.isEmpty()) {
+            List<UUID> productIds = productsPage.getContent().stream().map(Product::getId).toList();
+            productRepository.findAllWithVariantsByIds(productIds);
+        }
+
         return ApiResponse.success("Products fetched successfully",
-                productRepository
-                        .findFilteredCatalog(categoryId, deityId, pageable)
-                        .map(productMapper::toProductResponse));
+                productsPage.map(productMapper::toProductResponse));
     }
 
     @Override

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,4 +34,8 @@ public interface PujaKitRepository extends JpaRepository<PujaKit, UUID> {
     @EntityGraph(attributePaths = {"deity", "items", "items.product", "items.variant"})
     @Query("SELECT k FROM PujaKit k WHERE k.id = :id AND k.active = true")
     Optional<PujaKit> findActiveByIdWithDetails(@Param("id") UUID id);
+
+    @EntityGraph(attributePaths = {"items", "items.product", "items.variant"})
+    @Query("SELECT k FROM PujaKit k WHERE k.id IN :ids")
+    List<PujaKit> findAllWithItemsAndDetailsByIds(@Param("ids") List<UUID> ids);
 }

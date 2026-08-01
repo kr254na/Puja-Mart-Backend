@@ -10,6 +10,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 
 @Entity
 @Table(
@@ -63,6 +66,7 @@ public class PujaKit {
     private Boolean active = true;
 
     @ElementCollection
+    @Fetch(FetchMode.SUBSELECT)
     @CollectionTable(name = "puja_kit_images", joinColumns = @JoinColumn(name = "kit_id"))
     @Column(name = "image_url", nullable = false)
     @Builder.Default

@@ -8,6 +8,10 @@ import com.krishna.Pujamart.kits.exception.InvalidQuantityException;
 import com.krishna.Pujamart.kits.exception.ProductVariantMismatchException;
 import com.krishna.Pujamart.kits.exception.PujaKitAlreadyExistsException;
 import com.krishna.Pujamart.kits.exception.PujaKitNotFoundException;
+import com.krishna.Pujamart.order.exception.EmptyCartException;
+import com.krishna.Pujamart.order.exception.InsufficientStockException;
+import com.krishna.Pujamart.order.exception.InvalidOrderStateException;
+import com.krishna.Pujamart.order.exception.OrderNotFoundException;
 import com.krishna.Pujamart.wishlist.exception.WishlistItemNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -230,6 +234,30 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(WishlistItemNotFoundException.class)
     public ResponseEntity<ApiResponse<?>> handleWishlistItemNotFound(Exception ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmptyCartException.class)
+    public ResponseEntity<ApiResponse<?>> handleEmptyCart(Exception ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiResponse<?>> handleInsufficientStock(Exception ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleOrderNotFound(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidOrderStateException.class)
+    public ResponseEntity<ApiResponse<?>> handleInvalidOrderState(InvalidOrderStateException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
