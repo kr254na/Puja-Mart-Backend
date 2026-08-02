@@ -27,6 +27,12 @@ public class ProductVariantRequest {
             message = "Discount Price can have up to 8 digits and 2 decimal places")
     private BigDecimal discountPriceOverride;
 
+    @NotNull(message = "Weight is required")
+    @DecimalMin(value = "0.001", message = "Weight must be at least 0.001 kg")
+    @Digits(integer = 8, fraction = 3,
+            message = "Weight can have up to 8 digits and 3 decimal places")
+    private BigDecimal weight;
+
     @Min(value = 0, message = "Stock quantity cannot be negative")
     @NotNull
     private Integer stockQuantity = 0;

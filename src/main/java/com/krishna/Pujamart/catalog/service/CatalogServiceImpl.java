@@ -113,6 +113,7 @@ public class CatalogServiceImpl implements CatalogService {
                                 : false
                 )
                 .measurementUnit(request.getMeasurementUnit())
+                .weight(request.getWeight())
                 .imageUrls(
                         request.getImageUrls() != null
                                 ? new ArrayList<>(request.getImageUrls())
@@ -183,6 +184,7 @@ public class CatalogServiceImpl implements CatalogService {
         product.setDescription(request.getDescription());
         product.setBrand(request.getBrand());
         product.setSku(baseSku);
+        product.setWeight(request.getWeight());
         product.setPrice(request.getPrice());
         product.setDiscountPrice(request.getDiscountPrice());
 

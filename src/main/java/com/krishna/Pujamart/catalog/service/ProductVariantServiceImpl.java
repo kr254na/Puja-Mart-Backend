@@ -60,6 +60,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .material(request.getMaterial())
                 .basePriceOverride(request.getBasePriceOverride())
                 .discountPriceOverride(request.getDiscountPriceOverride())
+                .weight(request.getWeight())
                 .stockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0)
                 .build();
 
@@ -110,6 +111,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         variant.setMaterial(request.getMaterial());
         variant.setBasePriceOverride(request.getBasePriceOverride());
         variant.setDiscountPriceOverride(request.getDiscountPriceOverride());
+        variant.setWeight(request.getWeight());
         variant.setStockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0);
 
         ProductVariant updatedVariant = productVariantRepository.save(variant);

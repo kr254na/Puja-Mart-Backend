@@ -15,5 +15,6 @@ public class ProductVariantResponse {
     private String material;
     private BigDecimal basePriceOverride;
     private BigDecimal discountPriceOverride;
+    private BigDecimal weight;
     private Integer stockQuantity;
 }

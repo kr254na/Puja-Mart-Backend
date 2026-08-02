@@ -20,6 +20,12 @@ public class ProductRequest {
     @Size(max = 100, message = "Brand name cannot exceed 100 characters")
     private String brand;
 
+    @NotNull(message = "Weight is required")
+    @DecimalMin(value = "0.001", message = "Weight must be at least 0.001 kg")
+    @Digits(integer = 8, fraction = 3,
+            message = "Weight can have up to 8 digits and 3 decimal places")
+    private BigDecimal weight;
+
     @Pattern(regexp = "^[A-Za-z0-9-_]+$", message = "SKU must contain only alphanumeric characters, dashes, or underscores")
     @Size(max = 100, message = "SKU cannot exceed 100 characters")
     private String sku;

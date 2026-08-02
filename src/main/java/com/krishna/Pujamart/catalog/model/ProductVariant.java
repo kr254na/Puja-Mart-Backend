@@ -18,6 +18,7 @@ import java.util.UUID;
                 name = "chk_variant_pricing_stock",
                 constraint = "(base_price_override IS NULL OR base_price_override >= 0.01) AND " +
                         "(discount_price_override IS NULL OR (discount_price_override >= 0.00 AND (base_price_override IS NOT NULL AND discount_price_override <= base_price_override))) AND " +
+                        "weight >= 0.001 AND " +
                         "stock_quantity >= 0"
         )
 )
@@ -56,6 +57,11 @@ public class ProductVariant {
     @Digits(integer = 8, fraction = 2)
     @Column(name = "discount_price_override", precision = 10, scale = 2)
     private BigDecimal discountPriceOverride;
+
+    @DecimalMin("0.001")
+    @Digits(integer = 8, fraction = 3)
+    @Column(nullable = false, precision = 11, scale = 3)
+    private BigDecimal weight;
 
     @Min(0)
     @Column(name = "stock_quantity", nullable = false)

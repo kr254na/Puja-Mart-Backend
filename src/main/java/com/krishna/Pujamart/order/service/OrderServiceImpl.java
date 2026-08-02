@@ -8,6 +8,7 @@ import com.krishna.Pujamart.catalog.model.ProductVariant;
 import com.krishna.Pujamart.catalog.repository.ProductRepository;
 import com.krishna.Pujamart.catalog.repository.ProductVariantRepository;
 import com.krishna.Pujamart.identity.dto.ApiResponse;
+import com.krishna.Pujamart.kits.model.PujaKit;
 import com.krishna.Pujamart.kits.model.PujaKitItem;
 import com.krishna.Pujamart.order.dto.CreateOrderRequest;
 import com.krishna.Pujamart.order.dto.OrderResponse;
@@ -22,6 +23,7 @@ import com.krishna.Pujamart.order.model.*;
 import com.krishna.Pujamart.order.repository.OrderRepository;
 import com.krishna.Pujamart.order.utility.OrderMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ShippingService shippingService;
 
     @Override
     @Transactional
@@ -65,22 +68,23 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal subtotal = BigDecimal.ZERO;
 
+
+        BigDecimal totalWeight = BigDecimal.ZERO;
+
         for (CartItem cartItem : cart.getItems()) {
             validateStock(cartItem);
             deductStock(cartItem);
 
             OrderItem orderItem = buildOrderItemSnapshot(cartItem);
+
+            totalWeight = totalWeight.add(getTotalWeight(cartItem));
+
             subtotal = subtotal.add(orderItem.getTotalPrice());
             order.addOrderItem(orderItem);
         }
 
-        /* Pricing Rules
-        BigDecimal shippingFee = subtotal.compareTo(new BigDecimal("500.00")) >= 0
-                ? BigDecimal.ZERO
-                : new BigDecimal("50.00"); // Free shipping over ₹500
-        BigDecimal taxAmount = subtotal.multiply(new BigDecimal("0.05")).setScale(2, RoundingMode.HALF_UP); // 5% GST
-         */
-        BigDecimal shippingFee = BigDecimal.ZERO; // shipping fee to be handled later
+        BigDecimal shippingFee = shippingService.calculateShippingRate(request.getShippingAddress()
+                .getPostalCode(),totalWeight,false,subtotal);
         BigDecimal taxAmount = BigDecimal.ZERO; // No tax for now
         BigDecimal totalAmount = subtotal.add(shippingFee).add(taxAmount);
 
@@ -189,6 +193,47 @@ public class OrderServiceImpl implements OrderService {
 
                         return ApiResponse.success("Admin orders fetched successfully", ordersPage.map(orderMapper::toOrderResponse));
     }
+
+    // Calculates the total weight of this cart item in kilograms (kg)
+    public BigDecimal getTotalWeight(CartItem cartItem) {
+        BigDecimal unitWeight = BigDecimal.ZERO;
+
+        PujaKit kit = cartItem.getKit();
+        ProductVariant variant = cartItem.getVariant();
+        Product product = cartItem.getProduct();
+
+        if (kit != null) {
+            if (kit.getItems() != null) {
+                for (PujaKitItem kitItem : kit.getItems()) {
+                    BigDecimal itemUnitWeight = BigDecimal.ZERO;
+                    if (kitItem.getVariant() != null && kitItem.getVariant().getWeight() != null) {
+                        itemUnitWeight = kitItem.getVariant().getWeight();
+                    } else if (kitItem.getProduct() != null && kitItem.getProduct().getWeight() != null) {
+                        itemUnitWeight = kitItem.getProduct().getWeight();
+                    } else {
+                        itemUnitWeight = BigDecimal.ZERO;
+                    }
+                    BigDecimal totalItemWeight = itemUnitWeight.multiply(BigDecimal.valueOf(kitItem.getDefaultQuantity()));
+                    unitWeight = unitWeight.add(totalItemWeight);
+                }
+            }
+        } else if (variant != null) {
+            if (variant.getWeight() != null) {
+                unitWeight = variant.getWeight();
+            } else {
+                unitWeight = BigDecimal.ZERO;
+            }
+        } else if (product != null) {
+            if (product.getWeight() != null) {
+                unitWeight = product.getWeight();
+            } else {
+                unitWeight = BigDecimal.ZERO;
+            }
+        }
+
+        return unitWeight.multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+    }
+
     private void restoreStock(OrderItem item) {
         if (item.getKit() != null) {
             for (PujaKitItem kitItem : item.getKit().getItems()) {

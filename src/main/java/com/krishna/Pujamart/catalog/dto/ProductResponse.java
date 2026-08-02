@@ -19,6 +19,7 @@ public class ProductResponse {
     private String sku;
     private BigDecimal price;
     private BigDecimal discountPrice;
+    private BigDecimal weight;
     private Integer stockQuantity;
     private MeasurementUnit measurementUnit;
     private Boolean featured;

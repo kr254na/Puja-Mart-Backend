@@ -69,6 +69,11 @@ public class Product {
     @Column(name = "discount_price", precision = 10, scale = 2)
     private BigDecimal discountPrice;
 
+    @DecimalMin("0.001")
+    @Digits(integer = 8, fraction = 3)
+    @Column(nullable = false, precision = 11, scale = 3)
+    private BigDecimal weight;
+
     @Min(0)
     @Column(name = "stock_quantity", nullable = false)
     @Builder.Default

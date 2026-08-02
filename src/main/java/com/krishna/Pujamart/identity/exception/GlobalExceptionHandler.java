@@ -8,10 +8,7 @@ import com.krishna.Pujamart.kits.exception.InvalidQuantityException;
 import com.krishna.Pujamart.kits.exception.ProductVariantMismatchException;
 import com.krishna.Pujamart.kits.exception.PujaKitAlreadyExistsException;
 import com.krishna.Pujamart.kits.exception.PujaKitNotFoundException;
-import com.krishna.Pujamart.order.exception.EmptyCartException;
-import com.krishna.Pujamart.order.exception.InsufficientStockException;
-import com.krishna.Pujamart.order.exception.InvalidOrderStateException;
-import com.krishna.Pujamart.order.exception.OrderNotFoundException;
+import com.krishna.Pujamart.order.exception.*;
 import com.krishna.Pujamart.wishlist.exception.WishlistItemNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -258,6 +255,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidOrderStateException.class)
     public ResponseEntity<ApiResponse<?>> handleInvalidOrderState(InvalidOrderStateException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ThirdPartyServiceException.class)
+    public ResponseEntity<ApiResponse<?>> handleThirdPartyServiceException(InvalidOrderStateException ex) {
+        log.error("Shiprocket API rate calculation failed: ", ex);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
