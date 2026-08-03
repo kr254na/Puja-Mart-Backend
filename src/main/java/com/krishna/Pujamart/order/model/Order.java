@@ -3,6 +3,8 @@ package com.krishna.Pujamart.order.model;
 import com.krishna.Pujamart.order.enums.OrderStatus;
 import com.krishna.Pujamart.order.enums.PaymentStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.math.BigDecimal;

@@ -43,6 +43,8 @@ public class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
                                 .permitAll()
+                                .requestMatchers(HttpMethod.POST,"/api/v1/payments/razorpay/webhook")
+                                .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

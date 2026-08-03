@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,4 +31,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @EntityGraph(attributePaths = {"items"})
     @Query("SELECT o FROM Order o WHERE o.id IN :ids")
     List<Order> findAllWithItemsByIds(@Param("ids") List<UUID> ids);
+
+    @EntityGraph(attributePaths = {
+            "items",
+            "items.product",
+            "items.variant",
+            "items.kit"
+    })
+    List<Order> findByOrderStatusAndPlacedAtBefore(OrderStatus orderStatus, LocalDateTime threshold);
 }

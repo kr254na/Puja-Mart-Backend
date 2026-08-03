@@ -40,19 +40,7 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public ApiResponse<CartResponse> getCart(UUID userId) {
         Cart cart = getOrCreateCartEntity(userId);
-        
-        // Warm up cache for kit items and details in bulk if any exist
-        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
-            List<UUID> kitIds = cart.getItems().stream()
-                    .map(CartItem::getKit)
-                    .filter(Objects::nonNull)
-                    .map(PujaKit::getId)
-                    .toList();
-            if (!kitIds.isEmpty()) {
-                pujaKitRepository.findAllWithItemsAndDetailsByIds(kitIds);
-            }
-        }
-        
+        warmUpCartKitsCache(cart);
         return ApiResponse.success("Cart retrieved successfully", cartMapper.toCartResponse(cart));
     }
 
@@ -155,6 +143,7 @@ public class CartServiceImpl implements CartService {
         }
 
         Cart savedCart = cartRepository.save(cart);
+        warmUpCartKitsCache(savedCart);
         return ApiResponse.success("Item added to cart successfully", cartMapper.toCartResponse(savedCart));
     }
 
@@ -212,6 +201,7 @@ public class CartServiceImpl implements CartService {
         // 2. If validation passes, update quantity and save
         item.setQuantity(newQuantity);
         Cart savedCart = cartRepository.save(cart);
+        warmUpCartKitsCache(savedCart);
 
         return ApiResponse.success("Cart item quantity updated successfully", cartMapper.toCartResponse(savedCart));
     }
@@ -228,6 +218,7 @@ public class CartServiceImpl implements CartService {
 
         cart.removeItem(item);
         Cart savedCart = cartRepository.save(cart);
+        warmUpCartKitsCache(savedCart);
 
         return ApiResponse.success("Item removed from cart successfully", cartMapper.toCartResponse(savedCart));
     }
@@ -247,6 +238,19 @@ public class CartServiceImpl implements CartService {
                         .userId(userId)
                         .items(new ArrayList<>())
                         .build()));
+    }
+
+    private void warmUpCartKitsCache(Cart cart) {
+        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+            List<UUID> kitIds = cart.getItems().stream()
+                    .map(CartItem::getKit)
+                    .filter(Objects::nonNull)
+                    .map(PujaKit::getId)
+                    .toList();
+            if (!kitIds.isEmpty()) {
+                pujaKitRepository.findAllWithItemsAndDetailsByIds(kitIds);
+            }
+        }
     }
 
     private void validateAddToCartRequest(AddToCartRequest request) {

@@ -21,4 +21,6 @@ public interface OrderService {
     ApiResponse<OrderResponse> updateOrderStatus(UUID orderId, UpdateOrderStatusRequest request);
 
     ApiResponse<Page<OrderResponse>> getAllOrdersForAdmin(OrderStatus status, Pageable pageable);
+
+    void cancelExpiredPendingOrders();
 }

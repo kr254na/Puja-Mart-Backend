@@ -9,7 +9,10 @@ import com.krishna.Pujamart.kits.exception.ProductVariantMismatchException;
 import com.krishna.Pujamart.kits.exception.PujaKitAlreadyExistsException;
 import com.krishna.Pujamart.kits.exception.PujaKitNotFoundException;
 import com.krishna.Pujamart.order.exception.*;
+import com.krishna.Pujamart.payment.config.RazorpayConfig;
+import com.krishna.Pujamart.payment.exception.PaymentGatewayException;
 import com.krishna.Pujamart.wishlist.exception.WishlistItemNotFoundException;
+import com.razorpay.RazorpayException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -259,8 +262,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ThirdPartyServiceException.class)
-    public ResponseEntity<ApiResponse<?>> handleThirdPartyServiceException(InvalidOrderStateException ex) {
+    public ResponseEntity<ApiResponse<?>> handleThirdPartyServiceException(ThirdPartyServiceException ex) {
         log.error("Shiprocket API rate calculation failed: ", ex);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ResponseEntity<ApiResponse<?>> handlePaymentGatewayException(PaymentGatewayException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ApiResponse.error(ex.getMessage()));
     }

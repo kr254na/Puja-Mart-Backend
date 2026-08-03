@@ -22,8 +22,9 @@ import com.krishna.Pujamart.order.exception.OrderNotFoundException;
 import com.krishna.Pujamart.order.model.*;
 import com.krishna.Pujamart.order.repository.OrderRepository;
 import com.krishna.Pujamart.order.utility.OrderMapper;
+import com.krishna.Pujamart.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -45,8 +47,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final PaymentRepository paymentRepository;
     private final ShippingService shippingService;
-
     @Override
     @Transactional
     public ApiResponse<OrderResponse> createOrderFromCart(UUID userId, CreateOrderRequest request) {
@@ -194,8 +196,44 @@ public class OrderServiceImpl implements OrderService {
                         return ApiResponse.success("Admin orders fetched successfully", ordersPage.map(orderMapper::toOrderResponse));
     }
 
+
+    @Override
+    @Transactional
+    public void cancelExpiredPendingOrders() {
+
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
+
+        List<Order> expiredOrders = orderRepository.findByOrderStatusAndPlacedAtBefore(
+                OrderStatus.PENDING,
+                threshold
+        );
+        if (expiredOrders.isEmpty()) {
+            return;
+        }
+
+        // Inside cancelExpiredPendingOrders method:
+        for (Order order : expiredOrders) {
+            // Restore stock
+            for (OrderItem item : order.getItems()) {
+                restoreStock(item);
+            }
+            order.setOrderStatus(OrderStatus.CANCELLED);
+            order.setPaymentStatus(PaymentStatus.FAILED);
+            orderRepository.save(order);
+            // Cancel related pending payment attempts
+            paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
+                    .ifPresent(payment -> {
+                        if (payment.getStatus() == PaymentStatus.PENDING) {
+                            payment.setStatus(PaymentStatus.FAILED);
+                            payment.setErrorMessage("Order expired due to checkout inactivity.");
+                            paymentRepository.save(payment);
+                        }
+                    });
+        }
+    }
+
     // Calculates the total weight of this cart item in kilograms (kg)
-    public BigDecimal getTotalWeight(CartItem cartItem) {
+    private BigDecimal getTotalWeight(CartItem cartItem) {
         BigDecimal unitWeight = BigDecimal.ZERO;
 
         PujaKit kit = cartItem.getKit();
