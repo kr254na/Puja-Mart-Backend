@@ -250,4 +250,43 @@ public class RazorpayServiceImpl implements PaymentService {
                 .notes(notes)
                 .build();
     }
+    @Override
+    @Transactional
+    public void refundPayment(Order order) {
+        log.info("Initiating automatic Razorpay refund for order: {}", order.getOrderNumber());
+
+        Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId())
+                .orElseThrow(() -> new PaymentGatewayException("Payment record not found for order ID: " + order.getId()));
+
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            log.warn("Payment status is {}, cannot initiate refund.", payment.getStatus());
+            return;
+        }
+
+        try {
+            // Convert amount to Paisa
+            long amountInPaisa = payment.getAmount()
+                    .multiply(new BigDecimal("100"))
+                    .longValue();
+
+            JSONObject refundRequest = new JSONObject();
+            refundRequest.put("amount", amountInPaisa);
+            refundRequest.put("speed", "optimum");
+
+            // Request refund via Razorpay Client SDK
+            com.razorpay.Refund refund = razorpayClient.razorpayClient().payments.refund(
+                    payment.getGatewayPaymentId(),
+                    refundRequest
+            );
+
+            payment.setStatus(PaymentStatus.REFUNDED);
+            paymentRepository.save(payment);
+
+            log.info("Razorpay refund successful. Refund ID: {"+ refund.get("id")+"}");
+
+        } catch (Exception e) {
+            log.error("Razorpay refund API call failed for payment: {}", payment.getGatewayPaymentId(), e);
+            throw new PaymentGatewayException("Refund processing failed: " + e.getMessage());
+        }
+    }
 }

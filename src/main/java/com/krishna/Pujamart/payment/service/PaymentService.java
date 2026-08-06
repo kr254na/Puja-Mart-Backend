@@ -5,10 +5,12 @@ import com.krishna.Pujamart.payment.dto.PaymentOrderRequest;
 import com.krishna.Pujamart.payment.dto.PaymentOrderResponse;
 import com.krishna.Pujamart.payment.dto.PaymentVerificationRequest;
 
+import com.krishna.Pujamart.order.model.Order;
 import java.util.UUID;
 
 public interface PaymentService {
     ApiResponse<PaymentOrderResponse> createRazorpayOrder(UUID userId, PaymentOrderRequest request);
     ApiResponse<String> verifyPaymentSignature(UUID userId, PaymentVerificationRequest request);
     ApiResponse<String> processWebhookEvent(String payload, String signature);
+    void refundPayment(Order order);
 }

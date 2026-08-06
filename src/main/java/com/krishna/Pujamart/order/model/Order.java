@@ -3,8 +3,6 @@ package com.krishna.Pujamart.order.model;
 import com.krishna.Pujamart.order.enums.OrderStatus;
 import com.krishna.Pujamart.order.enums.PaymentStatus;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -63,6 +61,10 @@ public class Order {
     // Snapshot of Shipping Address at the time of purchase
     @Embedded
     private ShippingAddress shippingAddress;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Shipment shipment;
+
 
     @Column(name = "placed_at", nullable = false, updatable = false)
     private LocalDateTime placedAt;

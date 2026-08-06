@@ -23,6 +23,7 @@ import com.krishna.Pujamart.order.model.*;
 import com.krishna.Pujamart.order.repository.OrderRepository;
 import com.krishna.Pujamart.order.utility.OrderMapper;
 import com.krishna.Pujamart.payment.repository.PaymentRepository;
+import com.krishna.Pujamart.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductVariantRepository productVariantRepository;
     private final PaymentRepository paymentRepository;
     private final ShippingService shippingService;
+    private final PaymentService paymentService;
     @Override
     @Transactional
     public ApiResponse<OrderResponse> createOrderFromCart(UUID userId, CreateOrderRequest request) {
@@ -142,9 +144,14 @@ public class OrderServiceImpl implements OrderService {
 
         order.setOrderStatus(OrderStatus.CANCELLED);
 
-        // If payment was already completed, mark payment as pending refund
+        // If payment was already completed, trigger automatic refund via Razorpay API
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
-            order.setPaymentStatus(PaymentStatus.REFUNDED);
+            try {
+                paymentService.refundPayment(order);
+                order.setPaymentStatus(PaymentStatus.REFUNDED);
+            } catch (Exception e) {
+                log.error("Failed to automatically refund order on user cancellation: " + order.getId(), e);
+            }
         }
 
         Order savedOrder = orderRepository.save(order);
@@ -157,17 +164,60 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
 
+        OrderStatus oldStatus = order.getOrderStatus();
         OrderStatus newStatus = request.getStatus();
 
-        // Prevent transition to same status
-        if (order.getOrderStatus() == newStatus) {
+        // Prevent transition to the same status
+        if (oldStatus == newStatus) {
             return ApiResponse.success("Order status is already " + newStatus, orderMapper.toOrderResponse(order));
         }
 
-        // Handle stock rollback if admin manually cancels the order
+        // 1. ADMIN ACCEPTS: Transition from CONFIRMED (Paid) to PROCESSING
+        if (oldStatus == OrderStatus.CONFIRMED && newStatus == OrderStatus.PROCESSING) {
+            try {
+                shippingService.createShipment(order);
+            } catch (Exception e) {
+                log.error("Failed to automatically fulfill order in Shiprocket: " + order.getId(), e);
+            }
+        }
+
+        // 2. ADMIN REJECTS / CANCELS: Transition to CANCELLED
         if (newStatus == OrderStatus.CANCELLED) {
+            // Restore stock
             for (OrderItem item : order.getItems()) {
                 restoreStock(item);
+            }
+            // Issue refund if already paid
+            if (order.getPaymentStatus() == PaymentStatus.PAID) {
+                try {
+                    paymentService.refundPayment(order);
+                    order.setPaymentStatus(PaymentStatus.REFUNDED);
+                } catch (Exception e) {
+                    log.error("Failed to automatically refund rejected order: " + order.getId(), e);
+                }
+            }
+        }
+
+        // 3. ADMIN RE-ACCEPTS: Transition from CANCELLED back to active state
+        boolean isComingFromCancelled = oldStatus == OrderStatus.CANCELLED;
+        boolean isMovingToActive = newStatus != OrderStatus.CANCELLED && newStatus != OrderStatus.RETURNED;
+
+        if (isComingFromCancelled && isMovingToActive) {
+            // Validate stock availability for all items first
+            for (OrderItem item : order.getItems()) {
+                validateStock(item);
+            }
+            // Deduct the stock if validations pass
+            for (OrderItem item : order.getItems()) {
+                deductStock(item);
+            }
+            // Re-fulfill if moving directly back into PROCESSING
+            if (newStatus == OrderStatus.PROCESSING) {
+                try {
+                    shippingService.createShipment(order);
+                } catch (Exception e) {
+                    log.error("Failed to automatically fulfill reactivated order: " + order.getId(), e);
+                }
             }
         }
 
@@ -348,6 +398,56 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    private void validateStock(OrderItem item) {
+        if (item.getKit() != null) {
+            for (PujaKitItem kitItem : item.getKit().getItems()) {
+                int requiredQuantity = kitItem.getDefaultQuantity() * item.getQuantity();
+
+                if (kitItem.getVariant() != null) {
+                    if (kitItem.getVariant().getStockQuantity() < requiredQuantity) {
+                        throw new InsufficientStockException("Insufficient stock for kit item: " + kitItem.getVariant().getSku());
+                    }
+                } else if (kitItem.getProduct() != null) {
+                    if (kitItem.getProduct().getStockQuantity() < requiredQuantity) {
+                        throw new InsufficientStockException("Insufficient stock for kit item: " + kitItem.getProduct().getName());
+                    }
+                }
+            }
+        } else if (item.getVariant() != null) {
+            if (item.getVariant().getStockQuantity() < item.getQuantity()) {
+                throw new InsufficientStockException("Insufficient stock for variant: " + item.getVariant().getSku());
+            }
+        } else if (item.getProduct() != null) {
+            if (item.getProduct().getStockQuantity() < item.getQuantity()) {
+                throw new InsufficientStockException("Insufficient stock for product: " + item.getProduct().getName());
+            }
+        }
+    }
+
+    private void deductStock(OrderItem item) {
+        if (item.getKit() != null) {
+            for (PujaKitItem kitItem : item.getKit().getItems()) {
+                int deductQuantity = kitItem.getDefaultQuantity() * item.getQuantity();
+                if (kitItem.getVariant() != null) {
+                    ProductVariant variant = kitItem.getVariant();
+                    variant.setStockQuantity(variant.getStockQuantity() - deductQuantity);
+                    productVariantRepository.save(variant);
+                } else if (kitItem.getProduct() != null) {
+                    Product product = kitItem.getProduct();
+                    product.setStockQuantity(product.getStockQuantity() - deductQuantity);
+                    productRepository.save(product);
+                }
+            }
+        } else if (item.getVariant() != null) {
+            ProductVariant variant = item.getVariant();
+            variant.setStockQuantity(variant.getStockQuantity() - item.getQuantity());
+            productVariantRepository.save(variant);
+        } else if (item.getProduct() != null) {
+            Product product = item.getProduct();
+            product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+            productRepository.save(product);
+        }
+    }
 
     private OrderItem buildOrderItemSnapshot(CartItem cartItem) {
         OrderItem.OrderItemBuilder builder = OrderItem.builder()

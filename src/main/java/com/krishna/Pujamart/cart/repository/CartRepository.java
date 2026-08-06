@@ -15,7 +15,10 @@ public interface CartRepository extends JpaRepository<Cart, UUID> {
             "items",
             "items.product",
             "items.variant",
-            "items.kit"
+            "items.kit",
+            "items.kit.items",
+            "items.kit.items.product",
+            "items.kit.items.variant"
     })
     Optional<Cart> findByUserId(UUID userId);
 }

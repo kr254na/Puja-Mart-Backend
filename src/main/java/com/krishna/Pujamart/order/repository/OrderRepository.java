@@ -39,4 +39,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "items.kit"
     })
     List<Order> findByOrderStatusAndPlacedAtBefore(OrderStatus orderStatus, LocalDateTime threshold);
+
+    @EntityGraph(attributePaths = {
+            "items",
+            "items.product",
+            "items.variant",
+            "items.kit",
+            "items.kit.items",
+            "shipment"
+    })
+    @Query("SELECT o FROM Order o WHERE o.id = :id")
+    Optional<Order> findWithDetailsById(@Param("id") UUID id);
 }
