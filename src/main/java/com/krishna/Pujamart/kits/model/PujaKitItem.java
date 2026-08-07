@@ -11,6 +11,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "puja_kit_items",
+        indexes = {
+                @Index(name = "idx_puja_kit_item_kit", columnList = "kit_id"),
+                @Index(name = "idx_puja_kit_item_product", columnList = "product_id"),
+                @Index(name = "idx_puja_kit_item_variant", columnList = "variant_id")
+        },
         check = @CheckConstraint(
                 name = "chk_puja_kit_item_quantities",
                 constraint = "default_quantity >= 1 AND " +

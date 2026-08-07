@@ -1,10 +1,13 @@
 package com.krishna.Pujamart.identity.service;
 
+import com.krishna.Pujamart.cart.repository.CartRepository;
 import com.krishna.Pujamart.identity.dto.*;
 import com.krishna.Pujamart.identity.exception.*;
 import com.krishna.Pujamart.identity.model.User;
+import com.krishna.Pujamart.identity.repository.RefreshTokenRepository;
 import com.krishna.Pujamart.identity.repository.UserRepository;
 import com.krishna.Pujamart.identity.utility.UserMapper;
+import com.krishna.Pujamart.wishlist.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,9 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final CartRepository cartRepository;
+    private final WishlistRepository wishlistRepository;
 
     @Override
     public ApiResponse<UserResponse> getProfile(String email) {
@@ -77,7 +83,22 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        userRepository.delete(user);
+        // 1. Delete refresh tokens
+        refreshTokenRepository.deleteByUser(user);
+
+        // 2. Delete Cart & Wishlist
+        cartRepository.findByUserId(user.getId()).ifPresent(cartRepository::delete);
+        wishlistRepository.findByUserId(user.getId()).ifPresent(wishlistRepository::delete);
+
+        // 3. Soft Delete / Anonymize User
+        user.setEnabled(false);
+        user.setFirstName("Deleted");
+        user.setLastName("User");
+        user.setEmail("deleted-" + user.getId() + "@pujamart.local");
+        user.setContact(null);
+        user.setPassword(null);
+
+        userRepository.save(user);
 
         return ApiResponse.success("Account deleted successfully");
     }

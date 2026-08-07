@@ -311,10 +311,10 @@ public class PujaKitServiceImpl implements PujaKitService {
     @Override
     @Transactional
     public ApiResponse<Void> deleteKit(UUID id) {
-        if (!pujaKitRepository.existsById(id)) {
-            throw new PujaKitNotFoundException("PujaKit not found with ID: " + id);
-        }
-        pujaKitRepository.deleteById(id);
-        return ApiResponse.success("PujaKit permanently deleted successfully");
+        PujaKit pujaKit = pujaKitRepository.findById(id)
+                .orElseThrow(() -> new PujaKitNotFoundException("PujaKit not found with ID: " + id));
+        pujaKit.setActive(false);
+        pujaKitRepository.save(pujaKit);
+        return ApiResponse.success("PujaKit deleted successfully");
     }
 }

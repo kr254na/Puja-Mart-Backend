@@ -218,8 +218,7 @@ public class ShiprocketServiceImpl implements ShippingService {
                             .awbCode(body.getAwbCode())
                             .build();
 
-                    activeOrder.setShipment(shipment);
-                    orderRepository.save(activeOrder);
+                    shipmentRepository.save(shipment);
 
                     log.info("Shiprocket order created successfully. Order ID: {}, Shipment ID: {}", body.getOrderId(), body.getShipmentId());
                 } else {

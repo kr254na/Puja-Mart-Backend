@@ -45,8 +45,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             "items.product",
             "items.variant",
             "items.kit",
-            "items.kit.items",
-            "shipment"
+            "items.kit.items"
     })
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findWithDetailsById(@Param("id") UUID id);

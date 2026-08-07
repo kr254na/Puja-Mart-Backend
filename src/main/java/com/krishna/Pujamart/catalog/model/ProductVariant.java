@@ -71,6 +71,10 @@ public class ProductVariant {
     @Builder.Default
     private Integer stockQuantity = 0;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean active = true;
+
     public String getName() {
         java.util.List<String> parts = new java.util.ArrayList<>();
 

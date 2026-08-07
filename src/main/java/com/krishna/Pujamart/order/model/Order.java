@@ -62,10 +62,6 @@ public class Order {
     @Embedded
     private ShippingAddress shippingAddress;
 
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Shipment shipment;
-
-
     @Column(name = "placed_at", nullable = false, updatable = false)
     private LocalDateTime placedAt;
 

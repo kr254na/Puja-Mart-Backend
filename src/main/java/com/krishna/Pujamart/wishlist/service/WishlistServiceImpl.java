@@ -76,11 +76,17 @@ public class WishlistServiceImpl implements WishlistService {
         } else {
             Product product = productRepository.findById(request.getProductId())
                     .orElseThrow(() -> new ProductNotFoundException("Product with id "+request.getProductId()+" not found"));
+            if (!product.getActive()) {
+                throw new ProductNotFoundException("Product with id "+request.getProductId()+" not found");
+            }
             newItem.setProduct(product);
 
             if (request.getVariantId() != null) {
                 ProductVariant variant = productVariantRepository.findById(request.getVariantId())
                         .orElseThrow(() -> new ProductVariantNotFoundException("ProductVariant with id "+request.getVariantId()+" not found"));
+                if (!variant.getActive()) {
+                    throw new ProductVariantNotFoundException("ProductVariant with id "+request.getVariantId()+" not found");
+                }
                 newItem.setVariant(variant);
             }
         }

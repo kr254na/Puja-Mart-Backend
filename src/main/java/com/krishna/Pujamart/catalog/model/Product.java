@@ -87,6 +87,10 @@ public class Product {
     @Builder.Default
     private Boolean featured = false;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean active = true;
+
     @ElementCollection
     @Fetch(FetchMode.SUBSELECT)
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))

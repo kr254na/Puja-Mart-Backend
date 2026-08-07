@@ -15,7 +15,8 @@ import java.util.UUID;
                 indexes = {
                         @Index(name = "idx_cart_item_product", columnList = "product_id"),
                         @Index(name = "idx_cart_item_variant", columnList = "variant_id"),
-                        @Index(name = "idx_cart_item_kit", columnList = "kit_id")
+                        @Index(name = "idx_cart_item_kit", columnList = "kit_id"),
+                        @Index(name = "idx_cart_item_cart", columnList = "cart_id")
         },
                 check = @CheckConstraint(
                         name = "chk_cart_item_type",

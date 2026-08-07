@@ -20,10 +20,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query(
             value = "SELECT p FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
-                    "AND (:deityId IS NULL OR p.deity.id = :deityId)",
+                    "AND (:deityId IS NULL OR p.deity.id = :deityId) " +
+                    "AND p.active = true",
             countQuery = "SELECT COUNT(p) FROM Product p " +
                     "WHERE (:categoryId IS NULL OR p.category.id = :categoryId) " +
-                    "AND (:deityId IS NULL OR p.deity.id = :deityId)"
+                    "AND (:deityId IS NULL OR p.deity.id = :deityId) " +
+                    "AND p.active = true"
     )
     Page<Product> findFilteredCatalog(
             @Param("categoryId") UUID categoryId,

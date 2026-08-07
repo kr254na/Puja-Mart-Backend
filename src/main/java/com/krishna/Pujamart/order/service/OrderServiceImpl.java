@@ -374,10 +374,20 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateStock(CartItem item) {
         if (item.getKit() != null) {
+            if (!item.getKit().getActive()) {
+                throw new InsufficientStockException("Puja Kit is no longer available: " + item.getKit().getName());
+            }
             for (PujaKitItem kitItem : item.getKit().getItems()) {
                 int requiredQuantity = kitItem.getDefaultQuantity() * item.getQuantity();
 
+                if (kitItem.getProduct() != null && !kitItem.getProduct().getActive()) {
+                    throw new InsufficientStockException("Product inside Puja Kit is no longer available: " + kitItem.getProduct().getName());
+                }
+
                 if (kitItem.getVariant() != null) {
+                    if (!kitItem.getVariant().getActive()) {
+                        throw new InsufficientStockException("Variant inside Puja Kit is no longer available: " + kitItem.getVariant().getSku());
+                    }
                     if (kitItem.getVariant().getStockQuantity() < requiredQuantity) {
                         throw new InsufficientStockException("Insufficient stock for kit item: " + kitItem.getVariant().getSku());
                     }
@@ -388,10 +398,19 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         } else if (item.getVariant() != null) {
+            if (!item.getVariant().getActive()) {
+                throw new InsufficientStockException("Variant is no longer available: " + item.getVariant().getSku());
+            }
+            if (!item.getVariant().getProduct().getActive()) {
+                throw new InsufficientStockException("Product is no longer available: " + item.getVariant().getProduct().getName());
+            }
             if (item.getVariant().getStockQuantity() < item.getQuantity()) {
                 throw new InsufficientStockException("Insufficient stock for variant: " + item.getVariant().getSku());
             }
         } else if (item.getProduct() != null) {
+            if (!item.getProduct().getActive()) {
+                throw new InsufficientStockException("Product is no longer available: " + item.getProduct().getName());
+            }
             if (item.getProduct().getStockQuantity() < item.getQuantity()) {
                 throw new InsufficientStockException("Insufficient stock for product: " + item.getProduct().getName());
             }
@@ -400,10 +419,20 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateStock(OrderItem item) {
         if (item.getKit() != null) {
+            if (!item.getKit().getActive()) {
+                throw new InsufficientStockException("Puja Kit is no longer available: " + item.getKit().getName());
+            }
             for (PujaKitItem kitItem : item.getKit().getItems()) {
                 int requiredQuantity = kitItem.getDefaultQuantity() * item.getQuantity();
 
+                if (kitItem.getProduct() != null && !kitItem.getProduct().getActive()) {
+                    throw new InsufficientStockException("Product inside Puja Kit is no longer available: " + kitItem.getProduct().getName());
+                }
+
                 if (kitItem.getVariant() != null) {
+                    if (!kitItem.getVariant().getActive()) {
+                        throw new InsufficientStockException("Variant inside Puja Kit is no longer available: " + kitItem.getVariant().getSku());
+                    }
                     if (kitItem.getVariant().getStockQuantity() < requiredQuantity) {
                         throw new InsufficientStockException("Insufficient stock for kit item: " + kitItem.getVariant().getSku());
                     }
@@ -414,10 +443,19 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         } else if (item.getVariant() != null) {
+            if (!item.getVariant().getActive()) {
+                throw new InsufficientStockException("Variant is no longer available: " + item.getVariant().getSku());
+            }
+            if (!item.getVariant().getProduct().getActive()) {
+                throw new InsufficientStockException("Product is no longer available: " + item.getVariant().getProduct().getName());
+            }
             if (item.getVariant().getStockQuantity() < item.getQuantity()) {
                 throw new InsufficientStockException("Insufficient stock for variant: " + item.getVariant().getSku());
             }
         } else if (item.getProduct() != null) {
+            if (!item.getProduct().getActive()) {
+                throw new InsufficientStockException("Product is no longer available: " + item.getProduct().getName());
+            }
             if (item.getProduct().getStockQuantity() < item.getQuantity()) {
                 throw new InsufficientStockException("Insufficient stock for product: " + item.getProduct().getName());
             }

@@ -62,6 +62,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .discountPriceOverride(request.getDiscountPriceOverride())
                 .weight(request.getWeight())
                 .stockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0)
+                .active(true)
                 .build();
 
         ProductVariant savedVariant = productVariantRepository.save(variant);
@@ -125,10 +126,10 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     @Override
     @Transactional
     public ApiResponse<Void> deleteVariant(UUID variantId) {
-        if (!productVariantRepository.existsById(variantId)) {
-            throw new ProductVariantNotFoundException("Product variant not found with ID: " + variantId);
-        }
-        productVariantRepository.deleteById(variantId);
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ProductVariantNotFoundException("Product variant not found with ID: " + variantId));
+        variant.setActive(false);
+        productVariantRepository.save(variant);
 
         return ApiResponse.success("Product variant deleted successfully");
     }
@@ -141,6 +142,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         List<ProductVariantResponse> responses = productVariantRepository.findByProductId(productId)
                 .stream()
+                .filter(ProductVariant::getActive)
                 .map(productMapper::toVariantResponse)
                 .toList();
 
@@ -154,6 +156,9 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     public ApiResponse<ProductVariantResponse> getVariantById(UUID variantId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new ProductVariantNotFoundException("Product variant not found with ID: " + variantId));
+        if (!variant.getActive()) {
+            throw new ProductVariantNotFoundException("Product variant not found with ID: " + variantId);
+        }
 
         return ApiResponse.success(
                 "Product variant fetched successfully",

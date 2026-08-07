@@ -45,6 +45,9 @@ public class CatalogServiceImpl implements CatalogService {
     public ApiResponse<ProductResponse> getProductById(UUID id) {
         Product product = productRepository.findProductWithDetailsById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + id));
+        if (!product.getActive()) {
+            throw new ProductNotFoundException("Product not found with id: " + id);
+        }
         return ApiResponse.success("Product fetched successfully",
                 productMapper.toProductResponse(product));
     }
@@ -121,6 +124,7 @@ public class CatalogServiceImpl implements CatalogService {
                 )
                 .category(category)
                 .deity(deity)
+                .active(true)
                 .variants(new ArrayList<>())
                 .build();
 
@@ -226,10 +230,10 @@ public class CatalogServiceImpl implements CatalogService {
     @Override
     @Transactional
     public ApiResponse<Void> deleteProduct(UUID id) {
-        if (!productRepository.existsById(id)) {
-            throw new ProductNotFoundException("Product not found");
-        }
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + id));
+        product.setActive(false);
+        productRepository.save(product);
         return ApiResponse.success("Deleted the product successfully");
     }
 

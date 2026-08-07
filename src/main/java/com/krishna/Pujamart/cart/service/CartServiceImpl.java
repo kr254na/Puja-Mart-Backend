@@ -71,10 +71,16 @@ public class CartServiceImpl implements CartService {
         } else {
             product = productRepository.findById(request.getProductId())
                     .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + request.getProductId()));
+            if (!product.getActive()) {
+                throw new ProductNotFoundException("Product not found with ID: " + request.getProductId());
+            }
 
             if (request.getVariantId() != null) {
                 variant = productVariantRepository.findById(request.getVariantId())
                         .orElseThrow(() -> new ProductVariantNotFoundException("Variant not found with ID: " + request.getVariantId()));
+                if (!variant.getActive()) {
+                    throw new ProductVariantNotFoundException("Variant not found with ID: " + request.getVariantId());
+                }
                 if (variant != null && !variant.getProduct().getId().equals(product.getId())) {
                     throw new ProductVariantMismatchException("The selected variant does not belong to the specified product.");
                 }
